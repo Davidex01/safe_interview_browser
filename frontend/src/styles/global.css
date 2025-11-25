@@ -1,0 +1,546 @@
+/* 1. Сбрасываем и нормализуем стили */
+@import "./reset.css";
+@import "./normalize.css";
+
+/* 2. Базовые глобальные настройки */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #111827; /* gray-900 */
+  background-color: #f9fafb; /* gray-50 */
+  line-height: 1.5;
+}
+
+/* Лучше не задавать фиксированный размер шрифта на html/body,
+   чтобы масштабирование работало штатно */
+
+/* Убираем фокус-обводку только там, где дадим свою */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid #2563eb; /* primary */
+  outline-offset: 2px;
+}
+
+/* 3. Базовый layout приложения */
+
+.app-root {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1 0 auto;
+}
+
+/* 4. Container */
+
+.ui-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* 5. Кнопки */
+
+.ui-button {
+  border-radius: 0.375rem; /* 6px */
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  transition:
+    background-color 0.15s ease-out,
+    color 0.15s ease-out,
+    border-color 0.15s ease-out,
+    box-shadow 0.15s ease-out;
+}
+
+/* appearance: делаем кросс-браузерно */
+.ui-button {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.ui-button--primary {
+  background-color: #2563eb; /* blue-600 */
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.ui-button--primary:hover {
+  background-color: #1d4ed8; /* blue-700 */
+  border-color: #1d4ed8;
+}
+
+.ui-button--secondary {
+  background-color: #e5e7eb; /* gray-200 */
+  border-color: #e5e7eb;
+  color: #111827;
+}
+
+.ui-button--secondary:hover {
+  background-color: #d1d5db; /* gray-300 */
+  border-color: #d1d5db;
+}
+
+.ui-button--ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: #111827;
+}
+
+.ui-button--ghost:hover {
+  background-color: #e5e7eb; /* лёгкий hover */
+}
+
+.ui-button--disabled,
+.ui-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* 6. Section */
+
+.ui-section {
+  padding: 3rem 0;
+}
+
+@media (max-width: 768px) {
+  .ui-section {
+    padding: 2.25rem 0;
+  }
+}
+
+.ui-section__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.ui-section__subtitle {
+  margin-bottom: 1.5rem;
+  color: #6b7280; /* gray-500 */
+  max-width: 700px;
+}
+
+/* 7. Navbar */
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.navbar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 3.5rem;
+}
+
+.navbar__logo-text {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #111827;
+}
+
+.navbar__nav {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.navbar__link {
+  font-size: 0.95rem;
+  color: #4b5563; /* gray-600 */
+}
+
+.navbar__link:hover {
+  color: #111827;
+}
+
+.navbar__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .navbar__nav {
+    display: none; /* пока без мобильного меню */
+  }
+}
+
+/* 8. Footer */
+
+.footer {
+  flex-shrink: 0;
+  border-top: 1px solid #e5e7eb;
+  background-color: #ffffff;
+}
+
+.footer__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.footer__brand {
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+.footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.footer__link {
+  color: #6b7280;
+}
+
+.footer__link:hover {
+  color: #111827;
+}
+
+@media (max-width: 640px) {
+  .footer__inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+/* 9. Общие утилиты для landing */
+
+.landing-page {
+  padding-bottom: 2rem;
+}
+
+/* Сетка */
+
+.landing-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.landing-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.landing-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.landing-grid__col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .landing-grid--2,
+  .landing-grid--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Карточки */
+
+.landing-card {
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.landing-card h3,
+.landing-card h4 {
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+
+.landing-card p {
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+.landing-card--mock {
+  border-style: dashed;
+}
+
+.landing-card--note {
+  background-color: #eff6ff; /* blue-50 */
+  border-color: #bfdbfe; /* blue-200 */
+}
+
+/* Списки */
+
+.landing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.landing-list__item h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.25rem;
+}
+
+.landing-list__item p {
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+/* Статусы */
+
+.status {
+  font-size: 0.8rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.status--done {
+  background-color: #dcfce7; /* green-100 */
+  border-color: #bbf7d0; /* green-200 */
+  color: #166534; /* green-700 */
+}
+
+.status--active {
+  background-color: #dbeafe; /* blue-100 */
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.status--pending {
+  background-color: #fee2e2; /* red-100 */
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+/* 10. Hero секция */
+
+.landing-hero {
+  padding: 3.5rem 0 3rem;
+  background: radial-gradient(circle at top left, #dbeafe 0, #eff6ff 40%, #ffffff 100%);
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.landing-hero__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .landing-hero__inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+.landing-hero__title {
+  font-size: 2.25rem;
+  line-height: 1.2;
+  margin-bottom: 0.75rem;
+}
+
+.landing-hero__subtitle {
+  font-size: 1rem;
+  color: #4b5563;
+  margin-bottom: 1.5rem;
+  max-width: 32rem;
+}
+
+.landing-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.landing-hero__note {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.landing-hero__visual {
+  display: flex;
+  justify-content: center;
+}
+
+/* mockup IDE+чат */
+
+.hero-mockup {
+  width: 100%;
+  max-width: 420px;
+  background-color: #0f172a; /* slate-900 */
+  border-radius: 1rem;
+  padding: 0.75rem;
+  color: #e5e7eb;
+  box-shadow:
+    0 20px 25px -5px rgba(15, 23, 42, 0.3),
+    0 10px 10px -5px rgba(15, 23, 42, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hero-mockup__task {
+  background-color: #020617; /* slate-950 */
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.6rem;
+}
+
+.hero-mockup__task-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.hero-mockup__task-body {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.hero-mockup__editor {
+  background-color: #020617;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.hero-mockup__editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 0.6rem;
+  background-color: #020617;
+  border-bottom: 1px solid #1f2937;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.hero-mockup__badge {
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background-color: #1d4ed8;
+  color: #e5e7eb;
+  font-size: 0.7rem;
+}
+
+.hero-mockup__editor-body {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.7rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  white-space: pre;
+  color: #e5e7eb;
+}
+
+.hero-mockup__chat {
+  background-color: #020617;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.5rem;
+}
+
+.hero-mockup__chat-header {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-bottom: 0.3rem;
+}
+
+.hero-mockup__chat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hero-mockup__chat-message {
+  font-size: 0.72rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0.4rem;
+  max-width: 85%;
+}
+
+.hero-mockup__chat-message--ai {
+  background-color: #1e293b; /* slate-800 */
+  align-self: flex-start;
+}
+
+.hero-mockup__chat-message--user {
+  background-color: #2563eb;
+  align-self: flex-end;
+}
+
+/* 11. Специфические элементы некоторых секций */
+
+.landing-section__cta {
+  margin-top: 1.5rem;
+}
+
+/* Steps list (How it works) */
+
+.steps-list {
+  display: grid;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.steps-list li h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.25rem;
+}
+
+.steps-list li p {
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+.landing-note {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* 12. 404 */
+
+.not-found {
+  padding: 4rem 0;
+}
+
+.not-found__inner {
+  text-align: center;
+}
+
+.not-found__inner h1 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.not-found__inner p {
+  margin-bottom: 1.5rem;
+  color: #6b7280;
+}
