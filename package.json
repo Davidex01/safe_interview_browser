@@ -1,5 +1,5 @@
 {
-  "name": "save_intervue_browser",
+  "name": "safe_interview_browser",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,15 +8,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Davidex01/save_intervue_browser.git"
+    "url": "git+https://github.com/Davidex01/safe_interview_browser.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Davidex01/save_intervue_browser/issues"
+    "url": "https://github.com/Davidex01/safe_interview_browser/issues"
   },
-  "homepage": "https://github.com/Davidex01/save_intervue_browser#readme",
+  "homepage": "https://github.com/Davidex01/safe_interview_browser#readme",
   "dependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
