@@ -1,0 +1,58 @@
+/* Сбрасываем отступы и шрифты для типовых элементов */
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, menu, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+main, menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  vertical-align: baseline;
+}
+
+/* Корректно задаём display для HTML5-элементов в старых браузерах */
+article, aside, details, figcaption, figure,
+footer, header, hgroup, main, menu, nav, section {
+  display: block;
+}
+
+/* Сбрасываем список у ol/ul */
+ol, ul {
+  list-style: none;
+}
+
+/* Сбрасываем кавычки у цитат (на всякий случай) */
+blockquote, q {
+  quotes: none;
+}
+blockquote::before, blockquote::after,
+q::before, q::after {
+  content: "";
+  content: none;
+}
+
+/* Таблицы без отступов между ячейками */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* Наследуем шрифт для форм */
+input, button, textarea, select {
+  font: inherit;
+}
+
+/* Убираем подчеркивание ссылок по умолчанию (стилизовать будем сами) */
+a {
+  text-decoration: none;
+  color: inherit;
+}

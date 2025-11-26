@@ -1,0 +1,158 @@
+/* 1. Убираем различия в line-height у разных браузеров */
+html {
+  line-height: 1.15; /* 1 */
+  -webkit-text-size-adjust: 100%; /* 2 */
+}
+
+/* 2. Убираем margin у body */
+body {
+  margin: 0;
+}
+
+/* 3. Современный box-sizing для всех элементов */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* 4. Согласовываем отображение main */
+main {
+  display: block;
+}
+
+/* 5. Согласовываем h1 внутри section/article */
+h1 {
+  font-size: 2em;
+  margin: 0.67em 0;
+}
+
+/* 6. Согласовываем <hr> */
+hr {
+  box-sizing: content-box;
+  height: 0;
+  overflow: visible;
+}
+
+/* 7. Согласовываем обычный text-level семантический HTML */
+
+abbr[title] {
+  border-bottom: none;
+  text-decoration: underline dotted;
+}
+
+/* 8. Стили по умолчанию для bold/strong */
+b,
+strong {
+  font-weight: bolder;
+}
+
+/* 9. Стили по умолчанию для code/pre */
+code,
+kbd,
+samp,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 1em;
+}
+
+/* 10. Small */
+small {
+  font-size: 80%;
+}
+
+/* 11. Sub/sup */
+sub,
+sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+sub {
+  bottom: -0.25em;
+}
+sup {
+  top: -0.5em;
+}
+
+/* 12. Согласовываем отображение картинок */
+img {
+  border-style: none;
+  max-width: 100%;
+  height: auto;
+}
+
+/* 13. Кнопки и inputs */
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 100%;
+  line-height: 1.15;
+  margin: 0;
+}
+
+button,
+input { /* 1 */
+  overflow: visible;
+}
+
+button,
+select { /* 1 */
+  text-transform: none;
+}
+
+/* Убираем особенности Safari/Firefox у кнопок */
+
+button,
+[type="button"],
+[type="reset"],
+[type="submit"] {
+  appearance: button; 
+  -webkit-appearance: button; 
+}
+
+/* 14. Anchor-styles */
+a {
+  background-color: transparent;
+}
+
+/* 15. Согласование textarea */
+textarea {
+  overflow: auto;
+}
+
+/* 16. Согласование fieldset/legend */
+fieldset {
+  padding: 0.35em 0.75em 0.625em;
+}
+legend {
+  box-sizing: border-box;
+  display: table;
+  max-width: 100%;
+  white-space: normal;
+}
+
+/* 17. Details/summary */
+details {
+  display: block;
+}
+
+summary {
+  display: list-item;
+}
+
+/* 18. Template */
+template {
+  display: none;
+}
+
+/* 19. Hidden */
+[hidden] {
+  display: none !important;
+}
