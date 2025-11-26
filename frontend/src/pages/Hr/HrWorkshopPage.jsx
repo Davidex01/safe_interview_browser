@@ -1,316 +1,154 @@
-// src/pages/Hr/HrWorkshopPage.jsx
 import React, { useState } from "react";
 import Container from "../../components/ui/Container.jsx";
 import Button from "../../components/ui/Button.jsx";
+import { generateInterviewToken } from "../../utils/token.js";
 
-const TOPICS = [
-  { id: "algorithms", label: "Алгоритмы" },
-  { id: "product", label: "Продуктовые" },
-];
-
-const DIFFICULTIES = [
-  { value: "easy", label: "Лёгкие" },
-  { value: "medium", label: "Средние" },
-  { value: "hard", label: "Сложные" },
-];
-
-const LANGUAGES = [
-  "JavaScript",
-  "TypeScript",
-  "Python",
-  "Java",
-  "C++",
-  "Go",
-  "SQL",
-];
-
-function createCanvasNode(topicId, topicLabel, defaults = {}) {
-  return {
-    id: `${topicId}-${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2, 6)}`,
-    topicId,
-    topicLabel,
-    difficulty: defaults.difficulty || "",
-    language: defaults.language || "",
-  };
-}
+const COMPLEXITY_HINT = "Например: jun, jun+, mid, senior";
 
 function HrWorkshopPage() {
-  const [canvasNodes, setCanvasNodes] = useState([]);
+  const [position, setPosition] = useState("");
+  const [complexity, setComplexity] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [createdToken, setCreatedToken] = useState("");
+  const [apiResponse, setApiResponse] = useState(null);
 
-  const [topicConfigs, setTopicConfigs] = useState(() => {
-    const initial = {};
-    TOPICS.forEach((t) => {
-      initial[t.id] = { difficulty: "", language: "" };
-    });
-    return initial;
-  });
+  const isValid = position.trim() !== "" && complexity.trim() !== "";
 
-  const [draggedIndex, setDraggedIndex] = useState(null);
-
-  const handleChangeTopicDifficulty = (topicId, difficulty) => {
-    setTopicConfigs((prev) => ({
-      ...prev,
-      [topicId]: { ...prev[topicId], difficulty },
-    }));
-  };
-
-  const handleChangeTopicLanguage = (topicId, language) => {
-    setTopicConfigs((prev) => ({
-      ...prev,
-      [topicId]: { ...prev[topicId], language },
-    }));
-  };
-
-  const handleAddNodeToCanvas = (topicId, topicLabel) => {
-    const cfg = topicConfigs[topicId] || {};
-    const node = createCanvasNode(topicId, topicLabel, cfg);
-    setCanvasNodes((prev) => [...prev, node]);
-  };
-
-  const handleCanvasNodeChange = (nodeId, updates) => {
-    setCanvasNodes((prev) =>
-      prev.map((n) => (n.id === nodeId ? { ...n, ...updates } : n))
-    );
-  };
-
-  const handleDeleteNode = (nodeId) => {
-    setCanvasNodes((prev) => prev.filter((n) => n.id !== nodeId));
-  };
-
-  const handleDragStart = (index) => {
-    setDraggedIndex(index);
-  };
-
-  const handleDragOver = (e, overIndex) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (draggedIndex === null || draggedIndex === overIndex) return;
+    if (!isValid) return;
 
-    setCanvasNodes((prev) => {
-      const updated = [...prev];
-      const [moved] = updated.splice(draggedIndex, 1);
-      updated.splice(overIndex, 0, moved);
-      return updated;
-    });
-    setDraggedIndex(overIndex);
+    setIsSubmitting(true);
+    setSubmitError("");
+    setCreatedToken("");
+    setApiResponse(null);
+
+    const token = generateInterviewToken();
+    const payload = {
+      token,
+      position: position.trim(),
+      complexity: complexity.trim(),
+    };
+
+    try {
+      // Пока у тебя на бэке есть только /api/generate-tasks,
+      // мы используем его и передаём vacancy как комбинированный текст.
+      // Когда добавишь отдельную ручку для interview, можно будет менять здесь только URL/тело.
+
+      const vacancyText = `Должность: ${payload.position}. Сложность: ${payload.complexity}.`;
+      const res = await fetch("/api/generate-tasks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ vacancy: vacancyText, token: payload.token }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(
+          `Ошибка бэка (${res.status}): ${errText || "unknown"}`
+        );
+      }
+
+      const data = await res.json();
+      setCreatedToken(token);
+      setApiResponse(data);
+      // здесь же можно будет дернуть отдельный endpoint "create_interview",
+      // если ты его сделаешь (например POST /api/interviews)
+    } catch (err) {
+      console.error(err);
+      setSubmitError(
+        "Не удалось сформировать интервью. Попробуйте ещё раз или свяжитесь с разработчиком."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-  };
-
-  const handleSave = () => {
-    console.log("Canvas nodes:", canvasNodes);
-  };
+  const interviewLink =
+    createdToken && `${window.location.origin}/session/${createdToken}`;
 
   return (
     <section className="hr-workshop">
       <div className="hr-workshop__wrapper">
-        <Container className="hr-workshop__layout">
-          {/* ЛЕВАЯ ЧАСТЬ — ПОЛОТНО */}
-          <div className="hr-workshop__canvas-column">
-            <header className="hr-workshop__header">
-              <h1>Мастерская собеседований</h1>
-              <p>
-                Слева — полотно сценария интервью. Добавляйте блоки задач из
-                панели справа, настраивайте их сложность и язык. Блоки можно
-                перетаскивать и удалять.
-              </p>
-            </header>
+        <Container className="hr-workshop__simple">
+          <header className="hr-workshop__header">
+            <h1>Мастерская собеседований</h1>
+            <p>
+              Укажите должность и сложность, на которую вы хотите провести
+              собеседование. Система сгенерирует набор задач и уникальный
+              токен интервью.
+            </p>
+          </header>
 
-            <div className="hr-workshop__canvas">
-              {canvasNodes.length === 0 ? (
-                <div className="hr-workshop__canvas-empty">
-                  Добавьте блоки из панели задач справа, чтобы собрать сценарий
-                  интервью.
-                </div>
-              ) : (
-                <div className="hr-workshop__canvas-row">
-                  {canvasNodes.map((node, index) => (
-                    <CanvasNodeBlock
-                      key={node.id}
-                      node={node}
-                      index={index}
-                      onChange={handleCanvasNodeChange}
-                      onDelete={handleDeleteNode}
-                      onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
-                      onDragEnd={handleDragEnd}
-                    />
-                  ))}
-                </div>
-              )}
+          <form className="hr-workshop__simple-form" onSubmit={handleSubmit}>
+            <div className="hr-workshop__simple-field">
+              <label htmlFor="position">Должность</label>
+              <input
+                id="position"
+                type="text"
+                placeholder="Например: Backend разработчик"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+              />
             </div>
 
-            <div className="hr-workshop__canvas-actions">
+            <div className="hr-workshop__simple-field">
+              <label htmlFor="complexity">Сложность</label>
+              <input
+                id="complexity"
+                type="text"
+                placeholder={COMPLEXITY_HINT}
+                value={complexity}
+                onChange={(e) => setComplexity(e.target.value)}
+              />
+            </div>
+
+            {submitError && (
+              <div className="hr-workshop__error">{submitError}</div>
+            )}
+
+            <div className="hr-workshop__actions">
               <Button
-                type="button"
+                type="submit"
                 variant="primary"
-                onClick={handleSave}
-                disabled={canvasNodes.length === 0}
+                disabled={!isValid || isSubmitting}
               >
-                Сохранить сценарий
+                {isSubmitting
+                  ? "Формируем интервью..."
+                  : "Сформировать интервью"}
               </Button>
             </div>
-          </div>
+          </form>
 
-          {/* ПРАВАЯ ПАНЕЛЬ — ПРИЖАТА К ПРАВОМУ КРАЮ */}
-          <aside className="hr-workshop__palette-column">
-            <form
-              className="hr-workshop__topics-form"
-              onSubmit={(e) => e.preventDefault()}
-            >
-              <h2 className="hr-workshop__palette-title">Панель задач</h2>
-              <p className="hr-workshop__palette-subtitle">
-                Настройте параметры для тем и добавляйте блоки на полотно.
+          {createdToken && (
+            <div className="hr-workshop__result">
+              <h2>Интервью создано</h2>
+              <p>
+                Отправьте кандидату эту ссылку. По ней он попадёт на экран
+                согласия и затем в среду решения задач.
               </p>
+              <div className="hr-workshop__link-box">
+                <code>{interviewLink}</code>
+              </div>
+              <p className="hr-workshop__token-note">
+                Токен интервью: <strong>{createdToken}</strong>
+              </p>
+            </div>
+          )}
 
-              {TOPICS.map((topic) => {
-                const cfg = topicConfigs[topic.id];
-                return (
-                  <div key={topic.id} className="hr-workshop__topic-block">
-                    <div className="hr-workshop__topic-header">
-                      <h3 className="hr-workshop__topic-title">
-                        {topic.label}
-                      </h3>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="hr-workshop__topic-add"
-                        onClick={() =>
-                          handleAddNodeToCanvas(topic.id, topic.label)
-                        }
-                      >
-                        Добавить
-                      </Button>
-                    </div>
-
-                    <div className="hr-workshop__topic-field">
-                      <label htmlFor={`${topic.id}-difficulty`}>
-                        Сложность по умолчанию
-                      </label>
-                      <select
-                        id={`${topic.id}-difficulty`}
-                        value={cfg.difficulty}
-                        onChange={(e) =>
-                          handleChangeTopicDifficulty(topic.id, e.target.value)
-                        }
-                      >
-                        <option value="">Не выбрано</option>
-                        {DIFFICULTIES.map((d) => (
-                          <option key={d.value} value={d.value}>
-                            {d.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="hr-workshop__topic-field">
-                      <label htmlFor={`${topic.id}-language`}>
-                        Язык по умолчанию
-                      </label>
-                      <select
-                        id={`${topic.id}-language`}
-                        value={cfg.language}
-                        onChange={(e) =>
-                          handleChangeTopicLanguage(topic.id, e.target.value)
-                        }
-                      >
-                        <option value="">Не выбран</option>
-                        {LANGUAGES.map((lang) => (
-                          <option key={lang} value={lang}>
-                            {lang}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                );
-              })}
-            </form>
-          </aside>
+          {/* Для отладки можно показать сырые данные от бэка */}
+          {apiResponse && (
+            <details className="hr-workshop__api-debug">
+              <summary>Показать ответ бэка (отладка)</summary>
+              <pre>{JSON.stringify(apiResponse, null, 2)}</pre>
+            </details>
+          )}
         </Container>
       </div>
     </section>
-  );
-}
-
-function CanvasNodeBlock({
-  node,
-  index,
-  onChange,
-  onDelete,
-  onDragStart,
-  onDragOver,
-  onDragEnd,
-}) {
-  const handleDiffChange = (e) => {
-    onChange(node.id, { difficulty: e.target.value });
-  };
-
-  const handleLangChange = (e) => {
-    onChange(node.id, { language: e.target.value });
-  };
-
-  const handleDeleteClick = () => {
-    onDelete(node.id);
-  };
-
-  const handleDragStartLocal = () => {
-    onDragStart(index);
-  };
-
-  const handleDragOverLocal = (e) => {
-    onDragOver(e, index);
-  };
-
-  return (
-    <div
-      className="hr-workshop__canvas-node"
-      draggable
-      onDragStart={handleDragStartLocal}
-      onDragOver={handleDragOverLocal}
-      onDragEnd={onDragEnd}
-    >
-      <div className="hr-workshop__canvas-node-header">
-        <span className="hr-workshop__canvas-node-title">
-          {node.topicLabel}
-        </span>
-        <button
-          type="button"
-          className="hr-workshop__canvas-node-delete"
-          onClick={handleDeleteClick}
-          aria-label="Удалить блок"
-        >
-          ×
-        </button>
-      </div>
-      <div className="hr-workshop__canvas-node-body">
-        <div className="hr-workshop__canvas-node-field">
-          <label>Сложность</label>
-          <select value={node.difficulty} onChange={handleDiffChange}>
-            <option value="">Не выбрано</option>
-            {DIFFICULTIES.map((d) => (
-              <option key={d.value} value={d.value}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="hr-workshop__canvas-node-field">
-          <label>Язык</label>
-          <select value={node.language} onChange={handleLangChange}>
-            <option value="">Не выбран</option>
-            {LANGUAGES.map((lang) => (
-              <option key={lang} value={lang}>
-                {lang}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    </div>
   );
 }
 

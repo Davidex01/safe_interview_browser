@@ -1,20 +1,13 @@
-// src/pages/Session/SessionInterviewPage.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button.jsx";
+import { fetchInterviewByToken } from "../../api/interviewApi.js";
 
-const TABS = {
-  // оставим enum на будущее, но фактически вкладки больше не используем
-  STATEMENT: "statement",
-  EDITOR: "editor",
-  TESTS: "tests",
-};
+const INTERVIEW_DURATION_SECONDS = 45 * 60; // 45 минут
 
 function SessionInterviewPage() {
   const { token } = useParams();
   const navigate = useNavigate();
-
-  const INTERVIEW_DURATION_SECONDS = 45 * 60;
 
   const [remainingSeconds, setRemainingSeconds] = useState(
     INTERVIEW_DURATION_SECONDS
@@ -22,40 +15,64 @@ function SessionInterviewPage() {
   const [hasRedirectedOnTimeout, setHasRedirectedOnTimeout] =
     useState(false);
 
-  // Мок-данные задачи
-  const task = {
-    title: "Найти дубликаты в массиве",
-    description:
-      "Напишите функцию, которая по массиву целых чисел возвращает все элементы, встречающиеся более одного раза.",
-    constraints: [
-      "1 ≤ n ≤ 10^5",
-      "Элементы массива — целые числа по модулю не более 10^9",
-    ],
-    examples: [
-      {
-        input: "[1, 2, 3, 2, 4, 1]",
-        output: "[1, 2]",
-        explanation: "1 и 2 встречаются по два раза",
-      },
-      {
-        input: "[5, 5, 5]",
-        output: "[5]",
-        explanation: "5 встречается три раза",
-      },
-    ],
-    timeLimit: "1 секунда",
-    memoryLimit: "256 МБ",
-  };
-
-  const [code, setCode] = useState(
-    `def find_duplicates(arr):\n    # Напишите ваше решение здесь\n    pass\n`
+    const [code, setCode] = useState(
+    `# Ваше решение здесь\n`
   );
+  const [interview, setInterview] = useState(null);
+  const [loadError, setLoadError] = useState("");
+  const [isLoadingInterview, setIsLoadingInterview] = useState(true);
 
-  const [isRunningVisibleTests, setIsRunningVisibleTests] =
-    useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
 
-  // ===== ВОССТАНОВЛЕНИЕ ВРЕМЕНИ (как раньше) =====
+  // --- Загрузка интервью по токену ---
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+
+    async function load() {
+      setIsLoadingInterview(true);
+      setLoadError("");
+
+      try {
+        const data = await fetchInterviewByToken(token);
+        if (!cancelled) {
+          setInterview(data);
+          setCurrentTaskIndex(0);
+        }
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) {
+          setLoadError(
+            e.status === 404
+              ? "Интервью по этому токену не найдено."
+              : "Не удалось загрузить интервью. Попробуйте обновить страницу."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingInterview(false);
+        }
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  const tasks = interview?.tasks || [];
+  const currentTask =
+    tasks.length > 0
+      ? tasks[Math.min(currentTaskIndex, tasks.length - 1)]
+      : null;
+
+  const isFirstTask = currentTaskIndex === 0;
+  const isLastTask = tasks.length > 0 && currentTaskIndex === tasks.length - 1;
+
+  // --- Восстановление старта по токену (таймер) ---
   useEffect(() => {
     if (!token) return;
 
@@ -88,94 +105,154 @@ function SessionInterviewPage() {
     setRemainingSeconds(remaining > 0 ? remaining : 0);
   }, [token]);
 
-  // Тик таймера
+  // --- Тик таймера ---
   useEffect(() => {
-    if (remainingSeconds <= 0) {
-      return;
-    }
+    if (remainingSeconds <= 0) return;
 
-    const intervalId = setInterval(() => {
+    const id = setInterval(() => {
       setRemainingSeconds((prev) => {
         if (prev <= 1) {
-          clearInterval(intervalId);
+          clearInterval(id);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(intervalId);
+    return () => clearInterval(id);
   }, [remainingSeconds]);
 
-  // Автопереход на отчёт по окончании времени
+  // --- Переход на отчёт по окончании времени ---
   useEffect(() => {
     if (remainingSeconds <= 0 && !hasRedirectedOnTimeout && token) {
       setHasRedirectedOnTimeout(true);
-      navigate(`/session/${token}/report`, { replace: true });
+      navigate(`/session/${encodeURIComponent(token)}/report`, {
+        replace: true,
+      });
     }
   }, [remainingSeconds, hasRedirectedOnTimeout, navigate, token]);
 
   const handleRunVisibleTests = () => {
+    // TODO: заменить на реальный вызов API запуска видимых тестов
     setIsRunningVisibleTests(true);
-    setTimeout(() => {
-      setIsRunningVisibleTests(false);
-    }, 1000);
+    setTimeout(() => setIsRunningVisibleTests(false), 1000);
   };
 
   const handleSubmitSolution = () => {
+    // TODO: отправить решение на бэк, запустить скрытые тесты, зафиксировать попытку
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
-      // TODO: здесь отправка решения на бэк, смена задачи/состояния
+      // Здесь можно добавить переход к следующей задаче, если она есть
+      if (!isLastTask) {
+        setCurrentTaskIndex((prev) => prev + 1);
+      }
     }, 1500);
   };
 
-  const formatTime = (totalSeconds) => {
-    if (totalSeconds < 0) totalSeconds = 0;
-    const m = Math.floor(totalSeconds / 60);
-    const s = totalSeconds % 60;
-    const mm = m.toString().padStart(2, "0");
-    const ss = s.toString().padStart(2, "0");
-    return `${mm}:${ss}`;
+  const [isRunningVisibleTests, setIsRunningVisibleTests] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const goToNextTask = () => {
+    if (!isLastTask) {
+      setCurrentTaskIndex((prev) => prev + 1);
+    }
   };
 
-  return (
-    <div className="session-interview">
-      <InterviewTopBar
-        remainingTime={formatTime(remainingSeconds)}
-        isTimeOver={remainingSeconds <= 0}
-      />
+  const goToPrevTask = () => {
+    if (!isFirstTask) {
+      setCurrentTaskIndex((prev) => prev - 1);
+    }
+  };
 
-      <div className="session-interview__body session-interview__body--split">
-        {/* ЛЕВАЯ КОЛОНКА: УСЛОВИЕ + ТЕСТЫ */}
-        <div className="session-interview__left">
-          <TaskStatement task={task} />
-          <TestsPane />
+  const formatTime = (totalSeconds) => {
+    const safe = Math.max(0, totalSeconds);
+    const m = Math.floor(safe / 60);
+    const s = safe % 60;
+    return `${m.toString().padStart(2, "0")}:${s
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  // --- Состояния загрузки/ошибки ---
+  if (isLoadingInterview) {
+    return (
+      <section className="demo-interview">
+        <div className="demo-interview__inner">
+          <p>Загружаем интервью...</p>
         </div>
+      </section>
+    );
+  }
 
-        {/* ПРАВАЯ КОЛОНКА: РЕДАКТОР */}
-        <div className="session-interview__right">
-          <EditorPane
-            code={code}
-            onChangeCode={setCode}
-            onRunVisibleTests={handleRunVisibleTests}
-            onSubmitSolution={handleSubmitSolution}
-            isRunningVisibleTests={isRunningVisibleTests}
-            isSubmitting={isSubmitting}
-          />
+  if (loadError || !currentTask) {
+    return (
+      <section className="demo-interview">
+        <div className="demo-interview__inner">
+          <h1>Интервью недоступно</h1>
+          <p className="session-report__error">
+            {loadError || "Не удалось получить данные интервью."}
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="demo-interview">
+      <div className="demo-interview__inner">
+        <SessionTopBar
+          currentIndex={currentTaskIndex}
+          total={tasks.length}
+          title={currentTask.title}
+          remainingTime={formatTime(remainingSeconds)}
+          isTimeOver={remainingSeconds <= 0}
+        />
+
+        <div className="session-interview__body session-interview__body--split">
+          {/* Левая колонка: условие + тесты + навигация по задачам */}
+          <div className="session-interview__left">
+            <TaskStatement
+            task={currentTask}
+            onPrev={goToPrevTask}
+            onNext={goToNextTask}
+            isFirst={isFirstTask}
+            isLast={isLastTask}
+            />
+            <TestsPane task={currentTask} />
+          </div>
+
+          {/* Правая колонка: редактор */}
+          <div className="session-interview__right">
+            <EditorPane
+              code={code}
+              onChangeCode={setCode}
+              onRunVisibleTests={handleRunVisibleTests}
+              onSubmitSolution={handleSubmitSolution}
+              isRunningVisibleTests={isRunningVisibleTests}
+              isSubmitting={isSubmitting}
+              isLastTask={isLastTask}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-function InterviewTopBar({ remainingTime, isTimeOver }) {
+function SessionTopBar({
+  currentIndex,
+  total,
+  title,
+  remainingTime,
+  isTimeOver,
+}) {
   return (
     <div className="session-interview__topbar">
       <div className="session-interview__topbar-left">
-        <span className="session-interview__task-label">Текущая задача</span>
+        <span className="session-interview__task-label">Задача</span>
         <span className="session-interview__task-name">
-          Задача 1 (определение уровня)
+          Задача {currentIndex + 1} из {total}: {title}
         </span>
       </div>
       <div className="session-interview__topbar-right">
@@ -190,45 +267,77 @@ function InterviewTopBar({ remainingTime, isTimeOver }) {
   );
 }
 
-function TaskStatement({ task }) {
+function TaskStatement({ task, onPrev, onNext, isFirst, isLast }) {
+  const title =
+    task.title ||
+    `Задача (${task.level || "без уровня"})`;
+  const description = task.description || task.statement || "";
+  const examples = task.examples || task.samples || [];
+  // constraints у тебя сейчас нет — можно оставить пустым массивом
+  const constraints = task.constraints || [];
+
   return (
     <div className="session-interview__pane session-interview__pane--statement">
-      <h2>{task.title}</h2>
-      <p className="session-interview__task-text">{task.description}</p>
+      <h2>{title}</h2>
+      {description && (
+        <p className="session-interview__task-text">{description}</p>
+      )}
 
-      <div className="session-interview__task-section">
-        <h3>Ограничения</h3>
-        <ul>
-          {task.constraints.map((c) => (
-            <li key={c}>{c}</li>
+      {constraints.length > 0 && (
+        <div className="session-interview__task-section">
+          <h3>Ограничения</h3>
+          <ul>
+            {constraints.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {examples.length > 0 && (
+        <div className="session-interview__task-section">
+          <h3>Примеры</h3>
+          {examples.map((ex, idx) => (
+            <div key={idx} className="session-interview__example">
+              {ex.input && (
+                <div>
+                  <span className="session-interview__example-label">
+                    Ввод
+                  </span>
+                  <code>{ex.input}</code>
+                </div>
+              )}
+              {ex.output && (
+                <div>
+                  <span className="session-interview__example-label">
+                    Вывод
+                  </span>
+                  <code>{ex.output}</code>
+                </div>
+              )}
+            </div>
           ))}
-        </ul>
-        <p className="session-interview__limits">
-          Лимит времени: <strong>{task.timeLimit}</strong> · Лимит памяти:{" "}
-          <strong>{task.memoryLimit}</strong>
-        </p>
-      </div>
+        </div>
+      )}
 
-      <div className="session-interview__task-section">
-        <h3>Примеры</h3>
-        {task.examples.map((ex, idx) => (
-          <div key={idx} className="session-interview__example">
-            <div>
-              <span className="session-interview__example-label">Ввод</span>
-              <code>{ex.input}</code>
-            </div>
-            <div>
-              <span className="session-interview__example-label">Вывод</span>
-              <code>{ex.output}</code>
-            </div>
-            {ex.explanation && (
-              <p className="session-interview__example-note">
-                {ex.explanation}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
+      {onPrev && onNext && (
+        <div className="demo-interview__task-nav">
+          <Button
+            variant="secondary"
+            onClick={onPrev}
+            disabled={isFirst}
+          >
+            Предыдущая задача
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={onNext}
+            disabled={isLast}
+          >
+            Следующая задача
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -240,6 +349,7 @@ function EditorPane({
   onSubmitSolution,
   isRunningVisibleTests,
   isSubmitting,
+  isLastTask,
 }) {
   return (
     <div className="session-interview__pane session-interview__pane--editor">
@@ -263,7 +373,11 @@ function EditorPane({
             onClick={onSubmitSolution}
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Отправка..." : "Отправить решение"}
+            {isSubmitting
+              ? "Отправка..."
+              : isLastTask
+              ? "Отправить решение"
+              : "Отправить и перейти дальше"}
           </Button>
         </div>
       </div>
@@ -280,89 +394,60 @@ function EditorPane({
   );
 }
 
-function TestsPane() {
-  const visibleTests = [
-    {
-      id: 1,
-      name: "Пример 1",
-      input: "[1, 2, 3, 2, 4, 1]",
-      expected: "[1, 2]",
-      actual: "[1, 2]",
-      status: "passed",
-      time: "35 мс",
-    },
-    {
-      id: 2,
-      name: "Пример 2",
-      input: "[5, 5, 5]",
-      expected: "[5]",
-      actual: "[5]",
-      status: "passed",
-      time: "22 мс",
-    },
-  ];
-
-  const hiddenTestsSummary = {
-    total: 5,
-    passed: 3,
-    failed: 2,
-  };
+function TestsPane({ task }) {
+  const samples = task.samples || [];
+  const hiddenTests = task.tests || [];
 
   return (
     <div className="session-interview__pane session-interview__pane--tests">
-      <h2>Результаты видимых тестов</h2>
-      <div className="session-interview__tests-table-wrapper">
-        <table className="session-interview__tests-table">
-          <thead>
-            <tr>
-              <th>Тест</th>
-              <th>Ввод</th>
-              <th>Ожидаемый вывод</th>
-              <th>Фактический вывод</th>
-              <th>Статус</th>
-              <th>Время</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleTests.map((t) => (
-              <tr key={t.id}>
-                <td>{t.name}</td>
-                <td>
-                  <code>{t.input}</code>
-                </td>
-                <td>
-                  <code>{t.expected}</code>
-                </td>
-                <td>
-                  <code>{t.actual}</code>
-                </td>
-                <td>
-                  <span
-                    className={`session-interview__test-status session-interview__test-status--${t.status}`}
-                  >
-                    {t.status === "passed" ? "Пройден" : "Провален"}
-                  </span>
-                </td>
-                <td>{t.time}</td>
+      <h2>Видимые примеры</h2>
+
+      {samples.length === 0 ? (
+        <p className="session-interview__task-text">
+          Для этой задачи нет явных примеров (samples).
+        </p>
+      ) : (
+        <div className="session-interview__tests-table-wrapper">
+          <table className="session-interview__tests-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Ввод</th>
+                <th>Ожидаемый вывод</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {samples.map((s, idx) => (
+                <tr key={idx}>
+                  <td>{idx + 1}</td>
+                  <td>
+                    <code>{s.input}</code>
+                  </td>
+                  <td>
+                    <code>{s.output}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="session-interview__hidden-tests">
         <h3>Скрытые тесты</h3>
-        <p>
-          Скрытые тесты проверяют дополнительные граничные случаи и
-          производительность. Детали входных данных не раскрываются.
-        </p>
-        <p>
-          Пройдено{" "}
-          <strong>
-            {hiddenTestsSummary.passed} из {hiddenTestsSummary.total}
-          </strong>{" "}
-          скрытых тестов.
-        </p>
+        {hiddenTests.length === 0 ? (
+          <p>
+            Скрытые тесты для этой задачи не заданы. В реальном интервью сюда
+            попадают дополнительные проверки граничных случаев и
+            производительности.
+          </p>
+        ) : (
+          <p>
+            Количество скрытых тестов:{" "}
+            <strong>{hiddenTests.length}</strong>. Их входные данные и
+            ожидаемый вывод не раскрываются кандидату.
+          </p>
+        )}
       </div>
     </div>
   );

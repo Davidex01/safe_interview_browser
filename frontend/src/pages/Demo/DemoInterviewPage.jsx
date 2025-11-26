@@ -1,4 +1,3 @@
-// src/pages/Demo/DemoInterviewPage.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button.jsx";
