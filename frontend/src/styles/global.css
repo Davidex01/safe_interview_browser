@@ -107,7 +107,7 @@ body {
 }
 
 .ui-button--ghost:hover {
-  background-color: #e5e7eb;
+  background-color: #e5e7eb; /* лёгкий hover */
 }
 
 .ui-button--disabled,
@@ -466,6 +466,35 @@ body {
   padding: 0.4rem 0.5rem;
 }
 
+.hero-mockup__chat-header {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-bottom: 0.3rem;
+}
+
+.hero-mockup__chat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hero-mockup__chat-message {
+  font-size: 0.72rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0.4rem;
+  max-width: 85%;
+}
+
+.hero-mockup__chat-message--ai {
+  background-color: #1e293b; /* slate-800 */
+  align-self: flex-start;
+}
+
+.hero-mockup__chat-message--user {
+  background-color: #2563eb;
+  align-self: flex-end;
+}
+
 /* 11. Специфические элементы некоторых секций */
 
 .landing-section__cta {
@@ -554,12 +583,12 @@ body {
 .session-main {
   flex: 1 0 auto;
   display: flex;
-  padding: 2rem 0;
+  padding: 0;
 }
 
 .session-main__inner {
   width: 100%;
-  max-width: 800px; /* более узкое, чтобы текст правил читался комфортно */
+  max-width: 1200px; /* более узкое, чтобы текст правил читался комфортно */
 }
 
 
@@ -1252,37 +1281,21 @@ body {
 }
 
 
-/* HR workshop */
+/* HR workshop (упрощённая) */
 
 .hr-workshop {
   background-color: #f3f4f6;
 }
 
-/* растягиваем мастерскую на высоту экрана (минус navbar) */
 .hr-workshop__wrapper {
   min-height: calc(100vh - 3.5rem);
   display: flex;
-}
-
-.hr-workshop__layout {
-  display: grid;
-  margin: 0 0 0 20%;
-  grid-template-columns: minmax(0, 1.8fr) 320px; /* полотно + правая панель */
-  gap: 1.5rem;
   align-items: stretch;
-  padding: 2rem 0 2.5rem;
 }
 
-@media (max-width: 1024px) {
-  .hr-workshop__layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.hr-workshop__canvas-column {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.hr-workshop__simple {
+  max-width: 700px;
+  padding: 2.5rem 0 3rem;
 }
 
 .hr-workshop__header h1 {
@@ -1293,178 +1306,107 @@ body {
 .hr-workshop__header p {
   font-size: 0.95rem;
   color: #4b5563;
-  max-width: 640px;
+  max-width: 600px;
 }
 
-/* Полотно — большое, блоки в строку */
-
-.hr-workshop__canvas {
+.hr-workshop__simple-form {
+  margin-top: 1.5rem;
   background-color: #ffffff;
   border-radius: 0.75rem;
   border: 1px solid #e5e7eb;
-  min-height: 400px;
-  padding: 1rem 1.25rem 1.25rem;
-}
-
-.hr-workshop__canvas-empty {
-  font-size: 0.95rem;
-  color: #6b7280;
-}
-
-.hr-workshop__canvas-row {
+  padding: 1.5rem 1.5rem 1.25rem;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.hr-workshop__canvas-node {
-  background-color: #f9fafb;
-  border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
-  padding: 0.7rem 0.8rem;
-  min-width: 190px;
-  max-width: 260px;
-  cursor: grab;
-}
-
-.hr-workshop__canvas-node:active {
-  cursor: grabbing;
-}
-
-.hr-workshop__canvas-node-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.4rem;
-}
-
-.hr-workshop__canvas-node-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.hr-workshop__canvas-node-delete {
-  border: none;
-  background: transparent;
-  color: #9ca3af;
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-.hr-workshop__canvas-node-delete:hover {
-  color: #b91c1c;
-}
-
-.hr-workshop__canvas-node-body {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.4rem;
-}
-
-.hr-workshop__canvas-node-field {
+.hr-workshop__simple-field {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
 }
 
-.hr-workshop__canvas-node-field label {
-  font-size: 0.8rem;
+.hr-workshop__simple-field label {
+  font-size: 0.85rem;
   color: #374151;
 }
 
-.hr-workshop__canvas-node-field select {
+.hr-workshop__simple-field input {
   border-radius: 0.375rem;
   border: 1px solid #d1d5db;
-  padding: 0.3rem 0.45rem;
-  font-size: 0.9rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.95rem;
 }
 
-/* Кнопка сохранения под полотном */
+.hr-workshop__simple-field input:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-color: #2563eb;
+}
 
-.hr-workshop__canvas-actions {
+.hr-workshop__error {
+  font-size: 0.9rem;
+  color: #b91c1c;
+}
+
+.hr-workshop__actions {
   display: flex;
   justify-content: flex-end;
 }
 
-/* ПРАВАЯ ПАНЕЛЬ
-
-   Она внутри сетки — второй столбец 320px.
-   Чтобы визуально была "у правого края экрана", важно:
-   - контейнер .ui-container центрирует контент,
-   - наша панель занимает весь второй столбец и растягивается по высоте.
-*/
-
-.hr-workshop__palette-column {
-  background-color: #ffffff;
+.hr-workshop__result {
+  margin-top: 1.5rem;
+  background-color: #ecfdf5;
   border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
-  padding: 0.9rem 0.9rem 1rem;
-  max-height: 57%;
-  overflow-y: auto;
-  align-self: stretch;
+  border: 1px solid #bbf7d0;
+  padding: 1.25rem 1.5rem;
 }
 
-.hr-workshop__palette-title {
+.hr-workshop__result h2 {
   font-size: 1.1rem;
-  margin-bottom: 0.2rem;
-}
-
-.hr-workshop__palette-subtitle {
-  font-size: 0.85rem;
-  color: #6b7280;
-  margin-bottom: 0.75rem;
-}
-
-.hr-workshop__topics-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.hr-workshop__topic-block {
-  border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
-  padding: 0.7rem 0.75rem 0.8rem;
-  background-color: #f9fafb;
-}
-
-.hr-workshop__topic-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
   margin-bottom: 0.4rem;
 }
 
-.hr-workshop__topic-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.hr-workshop__topic-add {
-  font-size: 0.8rem;
-  padding-inline: 0.6rem;
-}
-
-.hr-workshop__topic-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  margin-bottom: 0.4rem;
-}
-
-.hr-workshop__topic-field label {
-  font-size: 0.8rem;
-  color: #374151;
-}
-
-.hr-workshop__topic-field select {
-  border-radius: 0.375rem;
-  border: 1px solid #d1d5db;
-  padding: 0.3rem 0.45rem;
+.hr-workshop__result p {
   font-size: 0.9rem;
+  color: #166534;
+  margin-bottom: 0.6rem;
+}
+
+.hr-workshop__link-box {
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  border: 1px dashed #bbf7d0;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.9rem;
+  overflow-x: auto;
+}
+
+.hr-workshop__token-note {
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+  color: #166534;
+}
+
+.hr-workshop__api-debug {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.hr-workshop__api-debug summary {
+  cursor: pointer;
+  color: #4b5563;
+}
+
+.hr-workshop__api-debug pre {
+  margin-top: 0.35rem;
+  background-color: #0f172a;
+  color: #e5e7eb;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  max-height: 260px;
+  overflow: auto;
+  font-size: 0.8rem;
 }
 
 .navbar__user {
