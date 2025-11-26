@@ -31,6 +31,7 @@ add_executable(interview_backend src/main.cpp)
 target_include_directories(interview_backend PUBLIC 
     ${httplib_SOURCE_DIR}
     ${json_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # For Windows: link against ws2_32 for networking
