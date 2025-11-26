@@ -101,13 +101,14 @@ body {
 }
 
 .ui-button--ghost {
-  background-color: transparent;
-  border-color: transparent;
-  color: #111827;
+  background-color: #2563eb; /* blue-600 */
+  border-color: #2563eb;
+  color: #ffffff;
 }
 
 .ui-button--ghost:hover {
-  background-color: #e5e7eb; /* лёгкий hover */
+  background-color: #1d4ed8; /* blue-700 */
+  border-color: #1d4ed8;
 }
 
 .ui-button--disabled,
