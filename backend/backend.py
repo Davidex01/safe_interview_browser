@@ -1,13 +1,15 @@
-# backend.py
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr, constr, validator
+from pydantic import BaseModel, EmailStr, ValidationInfo, constr, field_validator
+from contextlib import asynccontextmanager
 import hashlib
 import secrets
 import sqlite3
 from pathlib import Path
 from typing import Dict, Any
 import json
+
+from generation import generate_interview_tasks
 
 
 # Простое in-memory хранилище интервью. Потом можно заменить на БД.
@@ -57,15 +59,13 @@ def verify_password(password: str, stored_hash: str) -> bool:
     return secrets.compare_digest(candidate, expected)
 
 
-# если файл у тебя называется generation.py — меняешь тут имя
-from generation import generate_interview_tasks
-
-app = FastAPI()
-
-
-@app.on_event("startup")
-def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(_: FastAPI):
     init_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 # --- CORS, чтобы фронт мог дергать бэк из браузера ---
@@ -92,9 +92,11 @@ class HRRegistrationRequest(BaseModel):
     name: str | None = None
     company: str | None = None
 
-    @validator("confirm_password")
-    def passwords_match(cls, value: str, values: Dict[str, Any]) -> str:
-        if "password" in values and value != values["password"]:
+    @field_validator("confirm_password")
+    @classmethod
+    def passwords_match(cls, value: str, info: ValidationInfo) -> str:
+        password = info.data.get("password")
+        if password and value != password:
             raise ValueError("Пароли не совпадают")
         return value
 
