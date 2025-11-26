@@ -10,6 +10,7 @@ from typing import Dict, Any
 import json
 
 from generation import generate_interview_tasks
+from domain_tasks_generator import generate_domain_tasks
 
 
 # Простое in-memory хранилище интервью. Потом можно заменить на БД.
@@ -110,24 +111,30 @@ class HRLoginRequest(BaseModel):
 @app.post("/api/generate-tasks")
 def generate_tasks(req: VacancyRequest):
     try:
-        # вызывем твой генератор задач (можно передавать vacancy как есть)
-        tasks = generate_interview_tasks(req.vacancy)
+        coding_raw = generate_interview_tasks(req.vacancy)
+        coding_tasks = coding_raw.get("tasks", coding_raw)
 
-        # выбираем токен: из запроса, либо генерим на бэке (если не пришёл)
+        domain_tasks: list[dict[str, Any]] = []
+        for level in ("easy", "medium", "hard"):
+            domain_tasks.extend(
+                generate_domain_tasks(
+                    vacancy=req.vacancy,
+                    level=level,
+                    target_count=1,
+                    min_score=65,
+                    max_attempts=50,
+                )
+            )
+
         token = req.token or "int_" + str(len(INTERVIEWS) + 1)
-
-        # сохраняем интервью в памяти
-        raw = generate_interview_tasks(req.vacancy)
-        tasks = raw.get("tasks", raw)  # если raw уже список, это тоже сработает
 
         INTERVIEWS[token] = {
             "token": token,
             "position": req.position,
             "complexity": req.complexity,
-            "tasks": tasks,
+            "tasks": coding_tasks,
+            "domain_tasks": domain_tasks,
         }
-
-        # опционально можешь здесь сериализовать tasks, преобразовать форматы и т.п.
 
         return INTERVIEWS[token]
     except Exception as e:
