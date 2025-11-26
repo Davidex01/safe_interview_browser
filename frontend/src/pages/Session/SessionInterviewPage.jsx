@@ -48,7 +48,7 @@ function SessionInterviewPage() {
   };
 
   const [code, setCode] = useState(
-    `function findDuplicates(arr) {\n  // Напишите ваше решение здесь\n}`
+    `def find_duplicates(arr):\n    # Напишите ваше решение здесь\n    pass\n`
   );
 
   const [isRunningVisibleTests, setIsRunningVisibleTests] =
@@ -245,8 +245,8 @@ function EditorPane({
     <div className="session-interview__pane session-interview__pane--editor">
       <div className="session-interview__editor-header">
         <div className="session-interview__editor-meta">
-          <span className="session-interview__file-name">solution.js</span>
-          <span className="session-interview__language-badge">JavaScript</span>
+          <span className="session-interview__file-name">solution.py</span>
+          <span className="session-interview__language-badge">Python</span>
         </div>
         <div className="session-interview__editor-actions">
           <Button

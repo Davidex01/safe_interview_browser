@@ -2,7 +2,11 @@ import React from "react";
 import Container from "../../components/ui/Container.jsx";
 import Section from "../../components/ui/Section.jsx";
 import Button from "../../components/ui/Button.jsx";
-import { Link } from "react-router-dom";
+
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import TokenInputModal from "../../components/session/TokenInputModal.jsx";
+
 
 function LandingPage() {
   return (
@@ -18,83 +22,86 @@ function LandingPage() {
 }
 
 function HeroSection() {
+  const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleStartInterviewClick = () => {
+    setIsTokenModalOpen(true);
+  };
+
+  const handleTokenSubmit = (token) => {
+    setIsTokenModalOpen(false);
+    navigate(`/session/${encodeURIComponent(token)}`);
+  };
+
   return (
-    <section className="landing-hero">
-      <Container className="landing-hero__inner">
-        <div className="landing-hero__content">
-          <h1 className="landing-hero__title">
-            Автоматизированные технические интервью с ИИ-интервьюером
-          </h1>
-          <p className="landing-hero__subtitle">
-            Платформа проводит техническое собеседование прямо в браузере:
-            адаптивные задачи, безопасное выполнение кода в Docker и
-            объективная оценка без человеческого фактора.
-          </p>
+    <>
+      <section className="landing-hero">
+        <Container className="landing-hero__inner">
+          <div className="landing-hero__content">
+            <h1 className="landing-hero__title">
+              Автоматизированные технические интервью
+            </h1>
+            <p className="landing-hero__subtitle">
+              Платформа проводит техническое собеседование прямо в браузере:
+              адаптивные задачи, безопасное выполнение кода в Docker и
+              объективная оценка без человеческого фактора.
+            </p>
 
-          <div className="landing-hero__actions">
-            {/* Позже сюда добавим реальную логику старта сессии, токены и т.п. */}
-            <Button
-              as={Link}
-              to="/candidate/start"
-              variant="primary"
-            >
-              Начать интервью
-            </Button>
-            <Button
-              as={Link}
-              to="/demo"
-              variant="secondary"
-            >
-              Демо для компаний
-            </Button>
+            <div className="landing-hero__actions">
+              <Button
+                variant="primary"
+                onClick={handleStartInterviewClick}
+              >
+                Начать интервью
+              </Button>
+              <Button
+                as={Link}
+                to="/demo"
+                variant="secondary"
+              >
+                Демо для компаний
+              </Button>
+            </div>
+
+            <p className="landing-hero__note">
+              Не требуется установка. Всё работает в браузере.
+            </p>
           </div>
 
-          <p className="landing-hero__note">
-            Не требуется установка. Всё работает в браузере.
-          </p>
-        </div>
-
-        <div className="landing-hero__visual" aria-hidden="true">
-          {/* Упрощённый mockup интерфейса */}
-          <div className="hero-mockup">
-            <div className="hero-mockup__task">
-              <div className="hero-mockup__task-title">
-                Задача: Найти дубликаты в массиве
-              </div>
-              <div className="hero-mockup__task-body">
-                Напишите функцию, которая возвращает все элементы,
-                встречающиеся более одного раза...
-              </div>
-            </div>
-            <div className="hero-mockup__editor">
-              <div className="hero-mockup__editor-header">
-                <span>solution.js</span>
-                <span className="hero-mockup__badge">JS</span>
-              </div>
-              <div className="hero-mockup__editor-body">
-                {/* Просто псевдо-код для визуала */}
-                <code>
-                  {`function findDuplicates(arr) {\n  const seen = new Set();\n  const dup = new Set();\n  for (const n of arr) {\n    if (seen.has(n)) dup.add(n);\n    else seen.add(n);\n  }\n  return [...dup];\n}`}
-                </code>
-              </div>
-            </div>
-            <div className="hero-mockup__chat">
-              <div className="hero-mockup__chat-header">
-                AI interviewer • online
-              </div>
-              <div className="hero-mockup__chat-body">
-                <div className="hero-mockup__chat-message hero-mockup__chat-message--ai">
-                  Объясните, пожалуйста, временную сложность вашего решения.
+          <div className="landing-hero__visual" aria-hidden="true">
+            <div className="hero-mockup">
+              <div className="hero-mockup__task">
+                <div className="hero-mockup__task-title">
+                  Задача: Найти дубликаты в массиве
                 </div>
-                <div className="hero-mockup__chat-message hero-mockup__chat-message--user">
-                  О(n), мы проходим массив один раз...
+                <div className="hero-mockup__task-body">
+                  Напишите функцию, которая возвращает все элементы,
+                  встречающиеся более одного раза...
+                </div>
+              </div>
+              <div className="hero-mockup__editor">
+                <div className="hero-mockup__editor-header">
+                  <span>solution.py</span>
+                  <span className="hero-mockup__badge">Python</span>
+                </div>
+                <div className="hero-mockup__editor-body">
+                  <code>
+                    {`def find_duplicates(arr):\n    seen = set()\n    dup = set()\n    for n in arr:\n        if n in seen:\n            dup.add(n)\n        else:\n            seen.add(n)\n    return list(dup)\n`}
+                  </code>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </Container>
-    </section>
+        </Container>
+      </section>
+
+      <TokenInputModal
+        isOpen={isTokenModalOpen}
+        onClose={() => setIsTokenModalOpen(false)}
+        onSubmit={handleTokenSubmit}
+      />
+    </>
   );
 }
 
@@ -115,13 +122,6 @@ function ForCandidatesSection() {
                 Пишите и запускайте код с подсветкой синтаксиса и
                 автодополнением. Всё выполняется в изолированных
                 Docker-контейнерах.
-              </p>
-            </li>
-            <li className="landing-list__item">
-              <h3>ИИ-интервьюер</h3>
-              <p>
-                Обсуждайте подход и алгоритм с ИИ. Можно задать вопросы,
-                попросить наводку или объяснение ошибки без готового решения.
               </p>
             </li>
             <li className="landing-list__item">
@@ -182,7 +182,7 @@ function ForCompaniesSection() {
           <h3>Единые и объективные оценки</h3>
           <p>
             Стандартизированные задачи и отчёты по навыкам: правильность,
-            оптимальность, стиль кода, умение объяснять решения.
+            оптимальность, стиль кода.
           </p>
         </div>
         <div className="landing-card">
@@ -234,28 +234,21 @@ function HowItWorksSection() {
     >
       <ol className="steps-list">
         <li>
-          <h3>1. Выбор направления</h3>
-          <p>
-            Кандидат выбирает: Backend, Frontend, Data, DevOps и другие.
-            Платформа и ИИ получают начальный контекст.
-          </p>
-        </li>
-        <li>
-          <h3>2. Определение уровня</h3>
+          <h3>1. Определение уровня</h3>
           <p>
             ИИ выдаёт стартовую задачу, чтобы оценить базовый уровень. Кандидат
             пишет код в браузере, запускает тесты и общается с интервьюером.
           </p>
         </li>
         <li>
-          <h3>3. Адаптивные задачи</h3>
+          <h3>2. Адаптивные задачи</h3>
           <p>
             В зависимости от качества решения ИИ подбирает следующие задачи,
             сохраняя общий лимит времени интервью.
           </p>
         </li>
         <li>
-          <h3>4. Финальный отчёт</h3>
+          <h3>3. Финальный отчёт</h3>
           <p>
             Система формирует детальный отчёт по всем ключевым метрикам и даёт
             рекомендации по дальнейшему общению с кандидатом.

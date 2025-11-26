@@ -62,7 +62,7 @@ function DemoInterviewPage() {
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const currentTask = DEMO_TASKS[currentTaskIndex];
 
-  const [code, setCode] = useState("// Ваш код здесь");
+  const [code, setCode] = useState("# Ваш код здесь \n");
   const [isRunningVisibleTests, setIsRunningVisibleTests] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -305,9 +305,9 @@ function EditorPane({
     <div className="session-interview__pane session-interview__pane--editor">
       <div className="session-interview__editor-header">
         <div className="session-interview__editor-meta">
-          <span className="session-interview__file-name">demo.js</span>
+          <span className="session-interview__file-name">demo.py</span>
           <span className="session-interview__language-badge">
-            JavaScript
+            Python
           </span>
         </div>
         <div className="session-interview__editor-actions">
