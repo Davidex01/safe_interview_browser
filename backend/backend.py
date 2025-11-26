@@ -46,6 +46,17 @@ def hash_password(password: str) -> str:
     return f"{salt.hex()}${hashed.hex()}"
 
 
+def verify_password(password: str, stored_hash: str) -> bool:
+    try:
+        salt_hex, hash_hex = stored_hash.split("$", 1)
+    except ValueError:
+        return False
+    salt = bytes.fromhex(salt_hex)
+    expected = bytes.fromhex(hash_hex)
+    candidate = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100_000)
+    return secrets.compare_digest(candidate, expected)
+
+
 # если файл у тебя называется generation.py — меняешь тут имя
 from generation import generate_interview_tasks
 
@@ -86,6 +97,11 @@ class HRRegistrationRequest(BaseModel):
         if "password" in values and value != values["password"]:
             raise ValueError("Пароли не совпадают")
         return value
+
+
+class HRLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
 
 
 # --- Эндпоинт /api/generate-tasks ---
@@ -151,4 +167,26 @@ def register_hr_user(payload: HRRegistrationRequest):
         "name": payload.name,
         "company": payload.company,
         "message": "Регистрация прошла успешно",
+    }
+
+
+@app.post("/api/hr/login")
+def login_hr_user(payload: HRLoginRequest):
+    conn = get_db_connection()
+    try:
+        user = conn.execute(
+            "SELECT email, password_hash, name, company FROM hr_users WHERE email = ?",
+            (payload.email,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not user or not verify_password(payload.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Неверный email или пароль")
+
+    return {
+        "email": user["email"],
+        "name": user["name"],
+        "company": user["company"],
+        "message": "Вход выполнен успешно",
     }
