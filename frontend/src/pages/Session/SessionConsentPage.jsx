@@ -2,6 +2,22 @@ import React, { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import Button from "../../components/ui/Button.jsx";
 
+function AssistantCard({ message }) {
+  return (
+    <div className="session-interview__assistant-card">
+      <div className="session-interview__assistant-icon">
+        📱
+      </div>
+      <div>
+        <div className="session-interview__assistant-message">
+          {message}
+        </div>
+        <div className="session-interview__assistant-label">Ассистент</div>
+      </div>
+    </div>
+  );
+}
+
 function SessionConsentPage() {
   const navigate = useNavigate();
   const { token } = useParams();
@@ -28,7 +44,26 @@ function SessionConsentPage() {
   return (
     <section className="session-consent">
       <div className="session-consent__card">
-        <h1 className="session-consent__title">
+        <AssistantCard message="ПРИВЕТ! ТЕБЯ ПРИГЛАСИЛИ НА ИНТЕРВЬЮ. НАДО БУДЕТ РЕШИТЬ НЕСКОЛЬКО АЛГОРИТМИЧЕСКИХ И ЛОГИЧЕСКИХ ЗАДАЧ. ДЛЯ НАЧАЛА ПРОЧИТАЙ ИНСТРУКЦИИ, А КАК БУДЕШЬ ГОТОВ — НАЖМИ НА КНОПКУ" />
+        
+        <div className="session-consent__actions" style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+          <Button
+            variant="primary"
+            onClick={handleStart}
+            disabled={!allAccepted}
+          >
+            ГОТОВ
+          </Button>
+        </div>
+
+        <div className="session-consent__instructions">
+          <div className="session-consent__instructions-title">ИНСТРУКЦИЯ</div>
+          <div className="session-consent__instructions-text">
+            Система будет отслеживать 1, 2, 3
+          </div>
+        </div>
+
+        <h1 className="session-consent__title" style={{ marginTop: '2rem' }}>
           Приглашение на техническое интервью
         </h1>
         <p className="session-consent__intro">
@@ -91,13 +126,6 @@ function SessionConsentPage() {
         </div>
 
         <div className="session-consent__actions">
-          <Button
-            variant="primary"
-            disabled={!allAccepted}
-            onClick={handleStart}
-          >
-            Начать интервью
-          </Button>
           <Button
             variant="ghost"
             onClick={handleDecline}

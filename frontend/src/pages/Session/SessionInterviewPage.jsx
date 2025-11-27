@@ -303,6 +303,13 @@ function SessionInterviewPage() {
   return (
     <section className="demo-interview">
       <div className="demo-interview__inner">
+        <AssistantCard 
+          message={isFirstTask 
+            ? "ПРИВЕТ! ТЕБЯ ПРИГЛАСИЛИ НА ИНТЕРВЬЮ. НАДО БУДЕТ РЕШИТЬ НЕСКОЛЬКО АЛГОРИТМИЧЕСКИХ И ЛОГИЧЕСКИХ ЗАДАЧ. ДЛЯ НАЧАЛА ПРОЧИТАЙ ИНСТРУКЦИИ, А КАК БУДЕШЬ ГОТОВ — НАЖМИ НА КНОПКУ"
+            : "НАЧНЕМ С ЗАДАЧИ ПО АЛГОРИТМАМ"
+          }
+        />
+        
         <SessionTopBar
           currentIndex={currentTaskIndex}
           total={tasks.length}
@@ -346,6 +353,22 @@ function SessionInterviewPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+function AssistantCard({ message }) {
+  return (
+    <div className="session-interview__assistant-card">
+      <div className="session-interview__assistant-icon">
+        📱
+      </div>
+      <div>
+        <div className="session-interview__assistant-message">
+          {message}
+        </div>
+        <div className="session-interview__assistant-label">Ассистент</div>
+      </div>
+    </div>
   );
 }
 

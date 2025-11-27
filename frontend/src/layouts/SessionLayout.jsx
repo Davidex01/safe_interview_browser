@@ -13,7 +13,10 @@ function SessionLayout() {
       <header className="session-header">
         <Container className="session-header__inner">
           <div className="session-header__brand">
-            <span className="session-header__logo-text">Safe Interview</span>
+            <div className="session-header__logo">
+              <span className="session-header__logo-icon">⚡</span>
+              <span className="session-header__logo-text">ИНТЕРВЬЮ</span>
+            </div>
           </div>
           <div className="session-header__meta">
             {/* Здесь позже можно вывести название компании/интервью */}
