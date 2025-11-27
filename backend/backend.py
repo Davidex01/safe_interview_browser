@@ -140,6 +140,12 @@ app.add_middleware(
 )
 
 
+# Для защиты от списывания
+class CheatEvent(BaseModel):
+    type: str
+    time: str | None = None
+
+
 # --- Схемы запросов ---
 
 
@@ -255,6 +261,21 @@ def submit_interview(token: str, req: SubmitInterviewRequest):
         theory_solutions=req.theory_solutions,
     )
     return check_all(check_req)
+
+
+@app.post("/api/interview/{token}/cheat-event")
+def log_cheat_event(token: str, event: CheatEvent):
+    """
+    Логируем попытку списывания и помечаем интервью как остановленное.
+    """
+    interview = INTERVIEWS.get(token)
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+
+    interview.setdefault("cheat_events", []).append(event.model_dump())
+    interview["stopped_reason"] = "cheating"
+
+    return {"ok": True}
 
 
 @app.post("/api/hr/register")

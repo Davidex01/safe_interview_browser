@@ -1796,3 +1796,41 @@ body {
   justify-content: flex-end;
   gap: 0.5rem;
 }
+
+.session-interview__cheat-warning {
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #f97316; /* orange-500 */
+  background-color: #fff7ed; /* orange-50 */
+  font-size: 0.9rem;
+  color: #7c2d12; /* orange-900 */
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.session-interview__cheat-warning-close {
+  border: none;
+  background: transparent;
+  color: #7c2d12;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.session-interview__cheat-warning-close:hover {
+  text-decoration: underline;
+}
+
+.session-interview__stopped {
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.5rem;
+  border: 1px solid #b91c1c;      /* red-700 */
+  background-color: #fef2f2;      /* red-50 */
+  font-size: 0.9rem;
+  color: #7f1d1d;                 /* red-900 */
+}

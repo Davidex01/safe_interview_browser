@@ -1,33 +1,45 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button.jsx";
-import { fetchInterviewByToken, submitInterview } from "../../api/interviewApi.js";
+import {
+  fetchInterviewByToken,
+  submitInterview,
+} from "../../api/interviewApi.js";
 
-const INTERVIEW_DURATION_SECONDS = 45 * 60; // 45 минут
+const INTERVIEW_DURATION_SECONDS = 60 * 60; // 45 минут
 
 function SessionInterviewPage() {
   const { token } = useParams();
   const navigate = useNavigate();
 
+  // Таймер
   const [remainingSeconds, setRemainingSeconds] = useState(
     INTERVIEW_DURATION_SECONDS
   );
   const [hasRedirectedOnTimeout, setHasRedirectedOnTimeout] =
     useState(false);
 
+  // Данные интервью
   const [interview, setInterview] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [isLoadingInterview, setIsLoadingInterview] = useState(true);
 
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
 
-  // ответы по задачам
-  const [codeAnswers, setCodeAnswers] = useState([]);  // массив строк кода
-  const [textAnswers, setTextAnswers] = useState([]);  // массив текстовых ответов
+  // Ответы по задачам
+  const [codeAnswers, setCodeAnswers] = useState([]); // массив строк кода
+  const [textAnswers, setTextAnswers] = useState([]); // массив текстовых ответов
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- Загрузка интервью по токену ---
+  // Античит
+  const [cheatEvents, setCheatEvents] = useState([]);
+  const [showCheatWarning, setShowCheatWarning] = useState(false);
+  const [interviewStopped, setInterviewStopped] = useState(false);
+  const [stopReason, setStopReason] = useState("");
+
+  // ---------- ЗАГРУЗКА ИНТЕРВЬЮ ----------
+
   useEffect(() => {
     if (!token) return;
 
@@ -68,8 +80,6 @@ function SessionInterviewPage() {
 
   const codingTasks = interview?.coding_tasks || [];
   const theoryTasks = interview?.theory_tasks || [];
-
-  // общий список задач: сначала кодовые, затем теоретические
   const tasks = [...codingTasks, ...theoryTasks];
 
   const currentTask =
@@ -85,7 +95,8 @@ function SessionInterviewPage() {
   const isTextTask =
     tasks.length > 0 && currentTaskIndex >= codingCount;
 
-  // --- Инициализация массивов ответов при загрузке интервью ---
+  // ---------- ИНИЦИАЛИЗАЦИЯ ОТВЕТОВ ----------
+
   useEffect(() => {
     if (!interview) return;
 
@@ -110,7 +121,6 @@ function SessionInterviewPage() {
     });
   }, [interview]);
 
-  // --- Текущий код и текст для активной задачи ---
   const currentCode =
     !isTextTask && codeAnswers[currentTaskIndex] !== undefined
       ? codeAnswers[currentTaskIndex]
@@ -137,7 +147,8 @@ function SessionInterviewPage() {
     });
   };
 
-  // --- Таймер (с восстановлением по токену) ---
+  // ---------- ТАЙМЕР ----------
+
   useEffect(() => {
     if (!token) return;
 
@@ -187,57 +198,171 @@ function SessionInterviewPage() {
   }, [remainingSeconds]);
 
   useEffect(() => {
-    if (remainingSeconds <= 0 && !hasRedirectedOnTimeout && token) {
+    if (
+      remainingSeconds <= 0 &&
+      !hasRedirectedOnTimeout &&
+      token &&
+      !interviewStopped
+    ) {
       setHasRedirectedOnTimeout(true);
       navigate(`/session/${encodeURIComponent(token)}/report`, {
         replace: true,
       });
     }
-  }, [remainingSeconds, hasRedirectedOnTimeout, navigate, token]);
+  }, [remainingSeconds, hasRedirectedOnTimeout, navigate, token, interviewStopped]);
+
+  // ---------- НАВИГАЦИЯ ПО ЗАДАЧАМ ----------
 
   const goToNextTask = () => {
-    if (!isLastTask) {
+    if (!isLastTask && !interviewStopped) {
       setCurrentTaskIndex((prev) => prev + 1);
     }
   };
 
   const goToPrevTask = () => {
-    if (!isFirstTask) {
+    if (!isFirstTask && !interviewStopped) {
       setCurrentTaskIndex((prev) => prev - 1);
     }
   };
 
-  // --- Отправка решения ---
+  // ---------- АНТИЧИТ ----------
+
+  useEffect(() => {
+    if (!token) return;
+
+    const addEvent = async (type) => {
+      const time = new Date().toISOString();
+      setCheatEvents((prev) => [...prev, { type, time }]);
+      setShowCheatWarning(true);
+
+      if (!interviewStopped) {
+        setInterviewStopped(true);
+        setStopReason(
+          "Интервью остановлено из‑за нарушения правил (обнаружены подозрительные действия)."
+        );
+
+        try {
+          await fetch(
+            `/api/interview/${encodeURIComponent(token)}/cheat-event`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ type, time }),
+            }
+          );
+        } catch (e) {
+          console.error("Ошибка логирования cheat-event:", e);
+        }
+
+        try {
+          const emptyCoding = { easy: "", medium: "", hard: "" };
+          const emptyTheory = { easy: "", hard: "" };
+
+          const result = await submitInterview(token, {
+            coding_solutions: emptyCoding,
+            theory_solutions: emptyTheory,
+          });
+
+          navigate(`/session/${encodeURIComponent(token)}/report`, {
+            replace: true,
+            state: { submitResult: result },
+          });
+        } catch (e) {
+          console.error("Ошибка submit после читерства:", e);
+          navigate(`/session/${encodeURIComponent(token)}/report`, {
+            replace: true,
+          });
+        }
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        addEvent("tab_hidden");
+      }
+    };
+
+    const handleBlur = () => {
+      addEvent("window_blur");
+    };
+
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      addEvent("context_menu");
+    };
+
+    const handleCopy = (e) => {
+      e.preventDefault();
+      addEvent("copy_attempt");
+    };
+
+    const handlePaste = (e) => {
+      e.preventDefault();          // ЗАПРЕЩАЕМ вставку
+      addEvent("paste_attempt");
+    };
+
+    const handleKeyDown = (e) => {
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "i"))
+      ) {
+        e.preventDefault();
+        addEvent("devtools_attempt");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("copy", handleCopy);
+    document.addEventListener("paste", handlePaste);   // <‑‑ НОВОЕ
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("copy", handleCopy);
+      document.removeEventListener("paste", handlePaste); // <‑‑ НОВОЕ
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [token, interviewStopped, navigate]);
+
+  // ---------- ОТПРАВКА ИНТЕРВЬЮ ----------
+
   const handleSubmitSolution = async () => {
     if (!currentTask) return;
+
+    // если интервью остановлено из-за читерства — не даём отправлять
+    if (interviewStopped) return;
+
     setIsSubmitting(true);
 
     try {
-      // если это не последняя задача — просто двигаемся дальше
+      // если не последняя задача — просто переходим дальше
       if (!isLastTask) {
         setIsSubmitting(false);
         goToNextTask();
         return;
       }
 
-      // Последняя задача: формируем объект coding_solutions и theory_solutions.
-      // Предполагаем, что coding_tasks идут первыми, затем theory_tasks.
-
+      // последняя задача: собираем ВСЕ ответы
       const coding_solutions = { easy: "", medium: "", hard: "" };
       const theory_solutions = { easy: "", hard: "" };
 
-      // кодовые задачи
       codingTasks.forEach((task, idx) => {
-        const level = (task.level || "").toLowerCase(); // "easy" | "medium" | "hard"
+        const level = (task.level || "").toLowerCase();
         if (["easy", "medium", "hard"].includes(level)) {
           coding_solutions[level] = codeAnswers[idx] || "";
         }
       });
 
-      // теоретические задачи начинаются с индекса codingCount
       theoryTasks.forEach((task, offset) => {
         const idx = codingCount + offset;
-        const level = (task.level || "").toLowerCase(); // обычно "easy" или "hard"
+        const level = (task.level || "").toLowerCase();
         if (["easy", "hard"].includes(level)) {
           theory_solutions[level] = textAnswers[idx] || "";
         }
@@ -256,7 +381,6 @@ function SessionInterviewPage() {
       });
     } catch (e) {
       console.error(e);
-      // TODO: можно показать пользователю уведомление об ошибке
     } finally {
       setIsSubmitting(false);
     }
@@ -271,7 +395,8 @@ function SessionInterviewPage() {
       .padStart(2, "0")}`;
   };
 
-  // --- Состояния загрузки/ошибки ---
+  // ---------- СОСТОЯНИЯ ЗАГРУЗКИ ----------
+
   if (isLoadingInterview) {
     return (
       <section className="demo-interview">
@@ -295,6 +420,8 @@ function SessionInterviewPage() {
     );
   }
 
+  // ---------- РЕНДЕР ----------
+
   return (
     <section className="demo-interview">
       <div className="demo-interview__inner">
@@ -306,6 +433,30 @@ function SessionInterviewPage() {
           isTimeOver={remainingSeconds <= 0}
         />
 
+        {interviewStopped && (
+          <div className="session-interview__stopped">
+            <p>{stopReason || "Интервью было остановлено."}</p>
+          </div>
+        )}
+
+        {showCheatWarning && !interviewStopped && (
+          <div className="session-interview__cheat-warning">
+            <p>
+              Обнаружены действия, которые могут нарушать правила
+              проведения интервью (переключение вкладок, копирование,
+              попытка открыть DevTools и т.п.). Пожалуйста,
+              сосредоточьтесь на решении задач.
+            </p>
+            <button
+              type="button"
+              className="session-interview__cheat-warning-close"
+              onClick={() => setShowCheatWarning(false)}
+            >
+              Закрыть
+            </button>
+          </div>
+        )}
+
         <div className="session-interview__body session-interview__body--split">
           {/* Левая колонка: условие + навигация */}
           <div className="session-interview__left">
@@ -315,6 +466,7 @@ function SessionInterviewPage() {
               onNext={goToNextTask}
               isFirst={isFirstTask}
               isLast={isLastTask}
+              disabled={interviewStopped}
             />
           </div>
 
@@ -327,6 +479,7 @@ function SessionInterviewPage() {
                 onSubmitSolution={handleSubmitSolution}
                 isSubmitting={isSubmitting}
                 isLastTask={isLastTask}
+                disabled={interviewStopped}
               />
             ) : (
               <CodeEditorPane
@@ -335,6 +488,7 @@ function SessionInterviewPage() {
                 onSubmitSolution={handleSubmitSolution}
                 isSubmitting={isSubmitting}
                 isLastTask={isLastTask}
+                disabled={interviewStopped}
               />
             )}
           </div>
@@ -371,7 +525,14 @@ function SessionTopBar({
   );
 }
 
-function TaskStatement({ task, onPrev, onNext, isFirst, isLast }) {
+function TaskStatement({
+  task,
+  onPrev,
+  onNext,
+  isFirst,
+  isLast,
+  disabled,
+}) {
   const levelLabel = task.level ? `(${task.level})` : "";
   const description =
     task.statement || task.question || task.description || "";
@@ -428,14 +589,14 @@ function TaskStatement({ task, onPrev, onNext, isFirst, isLast }) {
         <Button
           variant="secondary"
           onClick={onPrev}
-          disabled={isFirst}
+          disabled={isFirst || disabled}
         >
           Предыдущая задача
         </Button>
         <Button
           variant="secondary"
           onClick={onNext}
-          disabled={isLast}
+          disabled={isLast || disabled}
         >
           Следующая задача
         </Button>
@@ -450,6 +611,7 @@ function CodeEditorPane({
   onSubmitSolution,
   isSubmitting,
   isLastTask,
+  disabled,
 }) {
   return (
     <div className="session-interview__pane session-interview__pane--editor">
@@ -462,7 +624,7 @@ function CodeEditorPane({
           <Button
             variant="primary"
             onClick={onSubmitSolution}
-            disabled={isSubmitting}
+            disabled={isSubmitting || disabled}
           >
             {isSubmitting
               ? "Отправка..."
@@ -479,6 +641,7 @@ function CodeEditorPane({
           value={code}
           onChange={(e) => onChangeCode(e.target.value)}
           spellCheck={false}
+          disabled={disabled}
         />
       </div>
     </div>
@@ -491,6 +654,7 @@ function TextAnswerPane({
   onSubmitSolution,
   isSubmitting,
   isLastTask,
+  disabled,
 }) {
   return (
     <div className="session-interview__pane session-interview__pane--editor">
@@ -507,7 +671,7 @@ function TextAnswerPane({
           <Button
             variant="primary"
             onClick={onSubmitSolution}
-            disabled={isSubmitting || !answer.trim()}
+            disabled={isSubmitting || disabled || !answer.trim()}
           >
             {isSubmitting
               ? "Отправка..."
@@ -525,6 +689,7 @@ function TextAnswerPane({
           onChange={(e) => onChangeAnswer(e.target.value)}
           spellCheck={false}
           placeholder="Опишите ваш подход и решение..."
+          disabled={disabled}
         />
       </div>
     </div>
