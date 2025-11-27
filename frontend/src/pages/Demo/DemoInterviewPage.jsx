@@ -1,3 +1,4 @@
+// src/pages/Demo/DemoInterviewPage.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button.jsx";
@@ -5,6 +6,7 @@ import Button from "../../components/ui/Button.jsx";
 const DEMO_TASKS = [
   {
     id: "demo1",
+    type: "code",
     title: "Найти дубликаты в массиве",
     description:
       "Напишите функцию, которая по массиву целых чисел возвращает все элементы, встречающиеся более одного раза.",
@@ -19,11 +21,10 @@ const DEMO_TASKS = [
         explanation: "1 и 2 встречаются по два раза",
       },
     ],
-    timeLimit: "1 секунда",
-    memoryLimit: "256 МБ",
   },
   {
     id: "demo2",
+    type: "code",
     title: "Развернуть строку",
     description:
       "Напишите функцию, которая разворачивает строку задом наперёд без использования встроенных методов reverse.",
@@ -34,18 +35,38 @@ const DEMO_TASKS = [
         output: '"olleh"',
       },
     ],
-    timeLimit: "1 секунда",
-    memoryLimit: "256 МБ",
   },
   {
     id: "demo3",
-    title: "Продуктовая задача",
+    type: "code",
+    title: "Найти сумму от 1 до n",
     description:
-      "Опишите, как бы вы спроектировали систему рекомендаций для новостной ленты, учитывая ограничения по времени ответа и нагрузке.",
-    constraints: [],
-    examples: [],
-    timeLimit: "",
-    memoryLimit: "",
+      "Напишите функцию, которая по целому числу n возвращает сумму чисел от 1 до n включительно.",
+    constraints: ["0 ≤ n ≤ 10^7"],
+    examples: [
+      {
+        input: "3",
+        output: "6",
+      },
+      {
+        input: "10",
+        output: "55",
+      },
+    ],
+  },
+  {
+    id: "demo4",
+    type: "text",
+    title: "Профильная задача: дизайн API",
+    description:
+      "Представьте, что вы проектируете внутреннее API для сервиса отправки уведомлений (email + push). К API обращаются разные внутренние сервисы. Кратко опишите:\n1) Какие конечные точки (эндпоинты) вы бы сделали.\n2) Какие основные поля были бы в запросе.\n3) Как бы вы заложили масштабирование (очереди, ретраи, логирование ошибок).",
+  },
+  {
+    id: "demo5",
+    type: "text",
+    title: "Профильная задача: обработка нагрузки",
+    description:
+      "У вас есть сервис, который принимает большое количество запросов в пиковое время (например, распродажа). Кратко опишите, какие подходы вы бы использовали, чтобы:\n1) Система не падала под нагрузкой.\n2) Пользователь всё равно получал предсказуемый опыт.\n3) Команда могла проанализировать инциденты постфактум.",
   },
 ];
 
@@ -61,7 +82,10 @@ function DemoInterviewPage() {
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const currentTask = DEMO_TASKS[currentTaskIndex];
 
-  const [code, setCode] = useState("# Ваш код здесь \n");
+  // Код и текстовый ответ храним отдельно
+  const [code, setCode] = useState("# Ваш код здесь\n");
+  const [textAnswer, setTextAnswer] = useState("");
+
   const [isRunningVisibleTests, setIsRunningVisibleTests] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -94,6 +118,7 @@ function DemoInterviewPage() {
   const isLastTask = currentTaskIndex === DEMO_TASKS.length - 1;
 
   const handleRunVisibleTests = () => {
+    if (currentTask.type !== "code") return;
     setIsRunningVisibleTests(true);
     setTimeout(() => setIsRunningVisibleTests(false), 800);
   };
@@ -101,15 +126,12 @@ function DemoInterviewPage() {
   const goToNextTask = () => {
     if (!isLastTask) {
       setCurrentTaskIndex((prev) => prev + 1);
-      // при желании можно сбрасывать код для новой задачи:
-      // setCode("// Ваш код здесь");
     }
   };
 
   const goToPrevTask = () => {
     if (!isFirstTask) {
       setCurrentTaskIndex((prev) => prev - 1);
-      // setCode("// Ваш код здесь");
     }
   };
 
@@ -138,59 +160,66 @@ function DemoInterviewPage() {
   };
 
   return (
-  <section className="demo-interview">
-    <div className="demo-interview__inner">
-      <DemoTopBar
-        currentIndex={currentTaskIndex}
-        total={DEMO_TASKS.length}
-        title={currentTask.title}
-        remainingTime={formatTime(remainingSeconds)}
-        isTimeOver={remainingSeconds <= 0}
-      />
+    <section className="demo-interview">
+      <div className="demo-interview__inner">
+        <DemoTopBar
+          currentIndex={currentTaskIndex}
+          total={DEMO_TASKS.length}
+          title={currentTask.title}
+          remainingTime={formatTime(remainingSeconds)}
+          isTimeOver={remainingSeconds <= 0}
+        />
 
-      <div className="session-interview__body session-interview__body--split">
-        {/* Левая колонка: условие + демо-тесты + навигация по задачам */}
-        <div className="session-interview__left">
-          <TaskStatement
-            task={currentTask}
-            isDemo
-            onPrev={goToPrevTask}
-            onNext={goToNextTask}
-            isFirst={isFirstTask}
-            isLast={isLastTask}
-          />
-          <DemoTestsPane />
+        <div className="session-interview__body session-interview__body--split">
+          {/* Левая колонка: условие + демо-тесты + навигация по задачам */}
+          <div className="session-interview__left">
+            <TaskStatement
+              task={currentTask}
+              isDemo
+              onPrev={goToPrevTask}
+              onNext={goToNextTask}
+              isFirst={isFirstTask}
+              isLast={isLastTask}
+            />
+          </div>
+
+          {/* Правая колонка: редактор кода или текстовый ответ */}
+          <div className="session-interview__right">
+            {currentTask.type === "code" ? (
+              <CodeEditorPane
+                code={code}
+                onChangeCode={setCode}
+                onSubmitSolution={handleSubmitSolution}
+                isSubmitting={isSubmitting}
+                isLastTask={isLastTask}
+              />
+            ) : (
+              <TextAnswerPane
+                answer={textAnswer}
+                onChangeAnswer={setTextAnswer}
+                onSubmitSolution={handleSubmitSolution}
+                isSubmitting={isSubmitting}
+                isLastTask={isLastTask}
+              />
+            )}
+          </div>
         </div>
 
-        {/* Правая колонка: редактор */}
-        <div className="session-interview__right">
-          <EditorPane
-            code={code}
-            onChangeCode={setCode}
-            onRunVisibleTests={handleRunVisibleTests}
-            onSubmitSolution={handleSubmitSolution}
-            isRunningVisibleTests={isRunningVisibleTests}
-            isSubmitting={isSubmitting}
-            isLastTask={isLastTask}
-          />
+        <div className="demo-interview__footer">
+          <p className="demo-interview__footer-text">
+            Закончили знакомство с демо‑интервью? Можно вернуться на главную
+            страницу и продолжить работу с платформой.
+          </p>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => navigate("/")}
+          >
+            Вернуться на главную
+          </Button>
         </div>
       </div>
-
-      {/* НОВЫЙ БЛОК: кнопка просмотра итогового окна */}
-      <div className="demo-interview__footer">
-        <p className="demo-interview__footer-text">
-          Готовы увидеть, каким будет финальный отчёт после интервью? Откройте демо‑версию итогового окна.
-        </p>
-        <Button
-          type="button"
-          variant="primary"
-          onClick={() => navigate("/demo/report")}
-        >
-        Открыть демо-отчёт
-        </Button>
-</div>
-    </div>
-  </section>
+    </section>
   );
 }
 
@@ -206,20 +235,39 @@ function DemoTopBar({ currentIndex, total, title, remainingTime, isTimeOver }) {
       <div className="session-interview__topbar-right">
         <div className="session-interview__timer">
           Осталось:{" "}
-            <strong className={isTimeOver ? "is-time-over" : ""}>
-              {remainingTime}
-            </strong>
+          <strong className={isTimeOver ? "is-time-over" : ""}>
+            {remainingTime}
+          </strong>
         </div>
       </div>
     </div>
   );
 }
 
-function TaskStatement({ task, isDemo = false, onPrev, onNext, isFirst, isLast }) {
+function TaskStatement({
+  task,
+  isDemo = false,
+  onPrev,
+  onNext,
+  isFirst,
+  isLast,
+}) {
+  const constraints = task.constraints || [];
+  const examples = task.examples || [];
+
   return (
     <div className="session-interview__pane session-interview__pane--statement">
       <h2>{task.title}</h2>
-      <p className="session-interview__task-text">{task.description}</p>
+      {task.description && (
+        <p className="session-interview__task-text">
+          {task.description.split("\n").map((line, idx) => (
+            <span key={idx}>
+              {line}
+              <br />
+            </span>
+          ))}
+        </p>
+      )}
 
       {isDemo && (
         <p className="session-interview__limits">
@@ -228,21 +276,21 @@ function TaskStatement({ task, isDemo = false, onPrev, onNext, isFirst, isLast }
         </p>
       )}
 
-      {task.constraints && task.constraints.length > 0 && (
+      {constraints.length > 0 && (
         <div className="session-interview__task-section">
           <h3>Ограничения</h3>
           <ul>
-            {task.constraints.map((c) => (
+            {constraints.map((c) => (
               <li key={c}>{c}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {task.examples && task.examples.length > 0 && (
+      {examples.length > 0 && (
         <div className="session-interview__task-section">
           <h3>Примеры</h3>
-          {task.examples.map((ex, idx) => (
+          {examples.map((ex, idx) => (
             <div key={idx} className="session-interview__example">
               {ex.input && (
                 <div>
@@ -270,7 +318,6 @@ function TaskStatement({ task, isDemo = false, onPrev, onNext, isFirst, isLast }
         </div>
       )}
 
-      {/* Навигация по задачам */}
       <div className="demo-interview__task-nav">
         <Button
           variant="secondary"
@@ -291,12 +338,10 @@ function TaskStatement({ task, isDemo = false, onPrev, onNext, isFirst, isLast }
   );
 }
 
-function EditorPane({
+function CodeEditorPane({
   code,
   onChangeCode,
-  onRunVisibleTests,
   onSubmitSolution,
-  isRunningVisibleTests,
   isSubmitting,
   isLastTask,
 }) {
@@ -310,15 +355,6 @@ function EditorPane({
           </span>
         </div>
         <div className="session-interview__editor-actions">
-          <Button
-            variant="secondary"
-            onClick={onRunVisibleTests}
-            disabled={isRunningVisibleTests || isSubmitting}
-          >
-            {isRunningVisibleTests
-              ? "Запуск тестов..."
-              : "Запустить демо-тесты"}
-          </Button>
           <Button
             variant="primary"
             onClick={onSubmitSolution}
@@ -345,17 +381,51 @@ function EditorPane({
   );
 }
 
-function DemoTestsPane() {
+function TextAnswerPane({
+  answer,
+  onChangeAnswer,
+  onSubmitSolution,
+  isSubmitting,
+  isLastTask,
+}) {
   return (
-    <div className="session-interview__pane session-interview__pane--tests">
-      <h2>Демо-тесты</h2>
-      <p className="session-interview__task-text">
-        В демо-режиме тесты носят иллюстративный характер. В реальном интервью
-        здесь отображаются результаты видимых примеров и агрегированная
-        информация по скрытым тестам.
-      </p>
+    <div className="session-interview__pane session-interview__pane--editor">
+      <div className="session-interview__editor-header">
+        <div className="session-interview__editor-meta">
+          <span className="session-interview__file-name">
+            Текстовый ответ
+          </span>
+          <span className="session-interview__language-badge">
+            Описание
+          </span>
+        </div>
+        <div className="session-interview__editor-actions">
+          <Button
+            variant="primary"
+            onClick={onSubmitSolution}
+            disabled={isSubmitting || !answer.trim()}
+          >
+            {isSubmitting
+              ? "Отправка..."
+              : isLastTask
+              ? "Завершить демо"
+              : "Отправить и перейти к следующей"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="session-interview__editor-body">
+        <textarea
+          className="session-interview__textarea"
+          value={answer}
+          onChange={(e) => onChangeAnswer(e.target.value)}
+          spellCheck={false}
+          placeholder="Кратко опишите ваш подход..."
+        />
+      </div>
     </div>
   );
 }
+
 
 export default DemoInterviewPage;
