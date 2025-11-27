@@ -41,6 +41,5 @@
 *.dwo
 
 .idea
-__pycache__
-
 backend/tokenn.py
+__pycache__

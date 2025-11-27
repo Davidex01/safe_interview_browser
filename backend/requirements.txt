@@ -1,7 +1,3 @@
 pydantic~=2.12.4
 openai~=2.8.1
-<<<<<<< HEAD
 fastapi
-=======
-fastapi
->>>>>>> 6025cb6c822312d3b4d0991d60cc551fc4a1857b

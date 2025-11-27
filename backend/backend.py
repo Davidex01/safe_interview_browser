@@ -6,17 +6,13 @@ import hashlib
 import secrets
 import sqlite3
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 import json
-import subprocess
-import sys
-import tempfile
 
 from generation import generate_interview_tasks
-from domain_tasks_generator import generate_domain_tasks, grade_candidate_answer
 
 
-# Простое in-memory хранилище интервью
+# Простое in-memory хранилище интервью. Потом можно заменить на БД.
 INTERVIEWS: Dict[str, Dict[str, Any]] = {}
 
 DB_PATH = Path(__file__).with_name("hr_users.db")
