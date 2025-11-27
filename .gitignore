@@ -42,3 +42,6 @@
 
 .idea
 __pycache__
+
+tokenn.py
+token.js
