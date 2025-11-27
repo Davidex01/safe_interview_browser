@@ -43,5 +43,4 @@
 .idea
 __pycache__
 
-**/backend/tokenn.py
-**/utils/token.js
+backend/tokenn.py
