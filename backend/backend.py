@@ -6,13 +6,17 @@ import hashlib
 import secrets
 import sqlite3
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 import json
+import subprocess
+import sys
+import tempfile
 
 from generation import generate_interview_tasks
+from domain_tasks_generator import generate_domain_tasks, grade_candidate_answer
 
 
-# Простое in-memory хранилище интервью. Потом можно заменить на БД.
+# Простое in-memory хранилище интервью
 INTERVIEWS: Dict[str, Dict[str, Any]] = {}
 
 DB_PATH = Path(__file__).with_name("hr_users.db")
@@ -136,12 +140,6 @@ app.add_middleware(
 )
 
 
-# Для защиты от списывания
-class CheatEvent(BaseModel):
-    type: str
-    time: str | None = None
-
-
 # --- Схемы запросов ---
 
 
@@ -189,54 +187,78 @@ class SubmitInterviewRequest(BaseModel):
 @app.post("/api/generate-tasks")
 def generate_tasks(req: VacancyRequest):
     try:
-        # 1) 3 алгоритмические задачи
-        raw = generate_interview_tasks(req.vacancy)
-        coding_tasks = raw.get("tasks", raw)
+        # 1) Генерация алгоритмических задач
+        raw_coding = generate_interview_tasks(req.vacancy)
 
-        # 2) 2 теоретические задачи: easy + hard
-        raw_theory_easy = generate_domain_tasks(
-            vacancy=req.vacancy,
-            level="easy",
-            target_count=1,
-            min_score=65,
-            max_attempts=50,
-        )
-        raw_theory_hard = generate_domain_tasks(
-            vacancy=req.vacancy,
-            level="hard",
-            target_count=1,
-            min_score=65,
-            max_attempts=50,
-        )
-        raw_theory_tasks = raw_theory_easy + raw_theory_hard
+        if isinstance(raw_coding, dict):
+            coding_tasks = raw_coding.get("tasks", [])
+        else:
+            coding_tasks = raw_coding  # считаем, что это уже список задач
 
-        # режем лишнее: оставляем только level, question, reference_answer
+        # 2) Пытаемся сгенерировать 2 теоретические задачи: easy + hard
+        theory_tasks: List[Dict[str, Any]] = []
+
+        # easy
+        try:
+            raw_theory_easy = generate_domain_tasks(
+                vacancy=req.vacancy,
+                level="easy",
+                target_count=1,
+                min_score=65,
+                max_attempts=50,
+            )
+        except Exception as e:
+            print(
+                "Ошибка генерации теоретической задачи уровня easy:",
+                repr(e),
+            )
+            raw_theory_easy = []
+
+        # hard
+        try:
+            raw_theory_hard = generate_domain_tasks(
+                vacancy=req.vacancy,
+                level="hard",
+                target_count=1,
+                min_score=65,
+                max_attempts=50,
+            )
+        except Exception as e:
+            print(
+                "Ошибка генерации теоретической задачи уровня hard:",
+                repr(e),
+            )
+            raw_theory_hard = []
+
+        raw_theory_all = (raw_theory_easy or []) + (raw_theory_hard or [])
+
         theory_tasks = [
             {
+                "vacancy": t.get("vacancy"),
                 "level": t.get("level"),
                 "question": t["question"],
                 "reference_answer": t["reference_answer"],
             }
-            for t in raw_theory_tasks
+            for t in raw_theory_all
+            if "question" in t and "reference_answer" in t
         ]
 
-        # 3) токен интервью
+        # 3) Токен интервью
         token = req.token or "int_" + str(len(INTERVIEWS) + 1)
 
-        # 4) сохраняем в памяти
+        # 4) Сохраняем интервью в памяти
         INTERVIEWS[token] = {
             "token": token,
             "vacancy": req.vacancy,
             "position": req.position,
             "complexity": req.complexity,
-            "coding_tasks": coding_tasks,   # 3 задачи с тестами
-            "theory_tasks": theory_tasks,   # 2 теоретические без метрик
+            "coding_tasks": coding_tasks,
+            "theory_tasks": theory_tasks,  # может быть [] — это ОК
         }
 
         return INTERVIEWS[token]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.get("/api/interview/{token}")
 def get_interview(token: str):
@@ -257,21 +279,6 @@ def submit_interview(token: str, req: SubmitInterviewRequest):
         theory_solutions=req.theory_solutions,
     )
     return check_all(check_req)
-
-
-@app.post("/api/interview/{token}/cheat-event")
-def log_cheat_event(token: str, event: CheatEvent):
-    """
-    Логируем попытку списывания и помечаем интервью как остановленное.
-    """
-    interview = INTERVIEWS.get(token)
-    if not interview:
-        raise HTTPException(status_code=404, detail="Interview not found")
-
-    interview.setdefault("cheat_events", []).append(event.model_dump())
-    interview["stopped_reason"] = "cheating"
-
-    return {"ok": True}
 
 
 @app.post("/api/hr/register")
