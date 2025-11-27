@@ -1,25 +1,22 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-<<<<<<< HEAD
-from pydantic import BaseModel, EmailStr, constr, validator
-=======
 from pydantic import BaseModel, EmailStr, ValidationInfo, constr, field_validator
 from contextlib import asynccontextmanager
->>>>>>> 6025cb6c822312d3b4d0991d60cc551fc4a1857b
 import hashlib
 import secrets
 import sqlite3
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 import json
-<<<<<<< HEAD
-=======
+import subprocess
+import sys
+import tempfile
 
 from generation import generate_interview_tasks
->>>>>>> 6025cb6c822312d3b4d0991d60cc551fc4a1857b
+from domain_tasks_generator import generate_domain_tasks, grade_candidate_answer
 
 
-# Простое in-memory хранилище интервью. Потом можно заменить на БД.
+# Простое in-memory хранилище интервью
 INTERVIEWS: Dict[str, Dict[str, Any]] = {}
 
 DB_PATH = Path(__file__).with_name("hr_users.db")
@@ -66,10 +63,65 @@ def verify_password(password: str, stored_hash: str) -> bool:
     return secrets.compare_digest(candidate, expected)
 
 
-<<<<<<< HEAD
-# если файл у тебя называется generation.py — меняешь тут имя
-from generation import generate_interview_tasks
-=======
+def _parse_int_output(s: str) -> int:
+    s = s.strip()
+    return int(s)
+
+
+def run_one_code_on_tests(code: str, tests: List[Dict[str, str]]) -> Dict[str, Any]:
+    """
+    Гоняем один питон-код по тестам.
+    tests: [{"input": "...", "output": "..."}]
+    """
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as f:
+        f.write(code)
+        tmp_path = f.name
+
+    total = len(tests)
+    passed = 0
+    failed_test: int | None = None
+
+    for i, t in enumerate(tests, start=1):
+        test_input = t["input"]
+        expected_raw = t["output"]
+
+        try:
+            proc = subprocess.run(
+                [sys.executable, tmp_path],
+                input=test_input.encode("utf-8"),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=3,
+            )
+        except subprocess.TimeoutExpired:
+            failed_test = i
+            break
+
+        stdout = proc.stdout.decode("utf-8", errors="ignore")
+
+        try:
+            exp = _parse_int_output(expected_raw)
+            got = _parse_int_output(stdout)
+            ok = (exp == got)
+        except Exception:
+            ok = False
+
+        if ok:
+            passed += 1
+        else:
+            failed_test = i
+            break
+
+    solved = (failed_test is None) and (passed == total)
+
+    return {
+        "solved": solved,
+        "failed_test": failed_test,
+        "passed_count": passed,
+        "total_count": total,
+    }
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
@@ -77,25 +129,20 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
->>>>>>> 6025cb6c822312d3b4d0991d60cc551fc4a1857b
 
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    init_db()
-
-
-# --- CORS, чтобы фронт мог дергать бэк из браузера ---
+# --- CORS ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # можешь сузить до нужного домена
+    allow_origins=["*"],  # можешь сузить
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- Схема запроса ---
+
+# --- Схемы запросов ---
+
+
 class VacancyRequest(BaseModel):
     vacancy: str
     token: str | None = None
@@ -110,17 +157,11 @@ class HRRegistrationRequest(BaseModel):
     name: str | None = None
     company: str | None = None
 
-<<<<<<< HEAD
-    @validator("confirm_password")
-    def passwords_match(cls, value: str, values: Dict[str, Any]) -> str:
-        if "password" in values and value != values["password"]:
-=======
     @field_validator("confirm_password")
     @classmethod
     def passwords_match(cls, value: str, info: ValidationInfo) -> str:
         password = info.data.get("password")
         if password and value != password:
->>>>>>> 6025cb6c822312d3b4d0991d60cc551fc4a1857b
             raise ValueError("Пароли не совпадают")
         return value
 
@@ -130,28 +171,65 @@ class HRLoginRequest(BaseModel):
     password: str
 
 
-# --- Эндпоинт /api/generate-tasks ---
+class CheckAllRequest(BaseModel):
+    token: str
+    coding_solutions: Dict[str, str]   # {"easy": "код", "medium": "код", "hard": "код"}
+    theory_solutions: Dict[str, str]   # {"easy": "ответ", "hard": "ответ"}
+
+class SubmitInterviewRequest(BaseModel):
+    coding_solutions: Dict[str, str]   # {"easy": "код", "medium": "код", "hard": "код"}
+    theory_solutions: Dict[str, str]   # {"easy": "ответ", "hard": "ответ"}
+
+
+# --- Эндпоинты ---
+
+
 @app.post("/api/generate-tasks")
 def generate_tasks(req: VacancyRequest):
     try:
-        # вызывем твой генератор задач (можно передавать vacancy как есть)
-        tasks = generate_interview_tasks(req.vacancy)
+        # 1) 3 алгоритмические задачи
+        raw = generate_interview_tasks(req.vacancy)
+        coding_tasks = raw.get("tasks", raw)
 
-        # выбираем токен: из запроса, либо генерим на бэке (если не пришёл)
+        # 2) 2 теоретические задачи: easy + hard
+        raw_theory_easy = generate_domain_tasks(
+            vacancy=req.vacancy,
+            level="easy",
+            target_count=1,
+            min_score=65,
+            max_attempts=50,
+        )
+        raw_theory_hard = generate_domain_tasks(
+            vacancy=req.vacancy,
+            level="hard",
+            target_count=1,
+            min_score=65,
+            max_attempts=50,
+        )
+        raw_theory_tasks = raw_theory_easy + raw_theory_hard
+
+        # режем лишнее: оставляем только level, question, reference_answer
+        theory_tasks = [
+            {
+                "level": t.get("level"),
+                "question": t["question"],
+                "reference_answer": t["reference_answer"],
+            }
+            for t in raw_theory_tasks
+        ]
+
+        # 3) токен интервью
         token = req.token or "int_" + str(len(INTERVIEWS) + 1)
 
-        # сохраняем интервью в памяти
-        raw = generate_interview_tasks(req.vacancy)
-        tasks = raw.get("tasks", raw)  # если raw уже список, это тоже сработает
-
+        # 4) сохраняем в памяти
         INTERVIEWS[token] = {
             "token": token,
+            "vacancy": req.vacancy,
             "position": req.position,
             "complexity": req.complexity,
-            "tasks": tasks,
+            "coding_tasks": coding_tasks,   # 3 задачи с тестами
+            "theory_tasks": theory_tasks,   # 2 теоретические без метрик
         }
-
-        # опционально можешь здесь сериализовать tasks, преобразовать форматы и т.п.
 
         return INTERVIEWS[token]
     except Exception as e:
@@ -164,6 +242,19 @@ def get_interview(token: str):
     if not interview:
         raise HTTPException(status_code=404, detail="Interview not found")
     return interview
+
+@app.post("/api/interview/{token}/submit")
+def submit_interview(token: str, req: SubmitInterviewRequest):
+    """
+    Обёртка над /api/check-all, чтобы не трогать фронт.
+    Фронт шлёт сюда ответы, мы внутри переиспользуем check_all().
+    """
+    check_req = CheckAllRequest(
+        token=token,
+        coding_solutions=req.coding_solutions,
+        theory_solutions=req.theory_solutions,
+    )
+    return check_all(check_req)
 
 
 @app.post("/api/hr/register")
@@ -184,7 +275,10 @@ def register_hr_user(payload: HRRegistrationRequest):
                 ),
             )
     except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="Пользователь с таким email уже существует")
+        raise HTTPException(
+            status_code=409,
+            detail="Пользователь с таким email уже существует",
+        )
     finally:
         conn.close()
 
@@ -215,8 +309,117 @@ def login_hr_user(payload: HRLoginRequest):
         "name": user["name"],
         "company": user["company"],
         "message": "Вход выполнен успешно",
-<<<<<<< HEAD
     }
-=======
+
+
+@app.post("/api/check-all")
+def check_all(req: CheckAllRequest):
+    interview = INTERVIEWS.get(req.token)
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+
+    coding_tasks = interview.get("coding_tasks") or interview.get("tasks") or []
+    theory_tasks = interview.get("theory_tasks") or []
+    vacancy_text = interview.get("vacancy", "")
+
+    # --- проверяем 3 кодинговые задачи ---
+    coding_results: list[Dict[str, Any]] = []
+    total_tests = 0
+    total_passed = 0
+
+    for task in coding_tasks:
+        level = task.get("level")
+        tests = task.get("tests") or []
+        total_tests += len(tests)
+
+        code = (req.coding_solutions.get(level) or "").strip()
+
+        if not code or not tests:
+            failed_test = 1 if tests else None
+            coding_results.append(
+                {
+                    "level": level,
+                    "solved": False,
+                    "failed_test": failed_test,
+                }
+            )
+            continue
+
+        check = run_one_code_on_tests(code, tests)
+        total_passed += check["passed_count"]
+
+        if check["solved"]:
+            coding_results.append(
+                {
+                    "level": level,
+                    "solved": True,
+                }
+            )
+        else:
+            coding_results.append(
+                {
+                    "level": level,
+                    "solved": False,
+                    "failed_test": check["failed_test"],
+                }
+            )
+
+    coding_percent = round(total_passed * 100 / total_tests) if total_tests else 0
+
+    # --- проверяем 2 теоретические задачи нейросетью ---
+    theory_results: list[Dict[str, Any]] = []
+    passed_count = 0
+    total_theory = len(theory_tasks)
+
+    for t in theory_tasks:
+        level = t.get("level")
+        question = t["question"]
+        ref_answer = t["reference_answer"]
+        cand_answer = (req.theory_solutions.get(level) or "").strip()
+
+        if not cand_answer:
+            theory_results.append(
+                {
+                    "level": level,
+                    "answered": False,
+                    "passed": False,
+                }
+            )
+            continue
+
+        grade = grade_candidate_answer(
+            vacancy_text,
+            level,
+            question,
+            ref_answer,
+            cand_answer,
+        )
+
+        # решаем, считать ответ "зачётным" или нет — но числа наружу не отдаём
+        passed = grade["final_score"] >= 65
+        if passed:
+            passed_count += 1
+
+        theory_results.append(
+            {
+                "level": level,
+                "answered": True,
+                "passed": passed,
+            }
+        )
+
+    theory_percent = (
+        round(passed_count * 100 / total_theory) if total_theory else 0
+    )
+
+    return {
+        "token": req.token,
+        "coding": {
+            "tasks": coding_results,
+            "passed_percent": coding_percent,
+        },
+        "theory": {
+            "tasks": theory_results,
+            "passed_percent": theory_percent,
+        },
     }
->>>>>>> 6025cb6c822312d3b4d0991d60cc551fc4a1857b

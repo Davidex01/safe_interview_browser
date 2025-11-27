@@ -1,4 +1,3 @@
-# generator.py
 import json
 import subprocess
 import tempfile
@@ -407,7 +406,7 @@ def generate_verified_task(
 # --------------------------------
 
 def generate_interview_tasks(vacancy_text: str) -> Dict:
-    label_levels = ["easy", "medium", "hard"]
+    label_levels = ["easy", "easy", "easy"]
     tasks = []
 
     for label in label_levels:
